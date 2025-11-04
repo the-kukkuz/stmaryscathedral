@@ -32,14 +32,28 @@ mongoose
 // API Routes
 // -------------------
 // Always use relative paths starting with "/"
-app.use("/api/members", memberRoutes);
-app.use("/api/families", familyRoutes);
-app.use("/api/marriages", marriageRoutes);
-app.use("/api/baptisms", baptismRoutes);
-app.use("/api/deaths", deathRoutes);
-app.use("/api/subscriptions", subscriptionRoutes);
+// Wrap route registration in a try/catch to prevent invalid path crash
+const safeUse = (path, router) => {
+  try {
+    if (!path.startsWith("/")) {
+      throw new Error(`Route path must start with "/": ${path}`);
+    }
+    app.use(path, router);
+  } catch (err) {
+    console.error(`❌ Skipping router due to invalid path: ${err.message}`);
+  }
+};
 
+safeUse("/api/members", memberRoutes);
+safeUse("/api/families", familyRoutes);
+safeUse("/api/marriages", marriageRoutes);
+safeUse("/api/baptisms", baptismRoutes);
+safeUse("/api/deaths", deathRoutes);
+safeUse("/api/subscriptions", subscriptionRoutes);
+
+// -------------------
 // Test endpoints
+// -------------------
 app.get("/", (req, res) => res.send("✅ ChurchDB API is running"));
 
 app.get("/api/test-db", async (req, res) => {
@@ -68,10 +82,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const reactBuildPath = path.join(__dirname, "../tnp-proj/build");
 
-// Serve React static files
 app.use(express.static(reactBuildPath));
 
-// Fallback for any frontend route
 app.get("*", (req, res) => {
   res.sendFile(path.join(reactBuildPath, "index.html"));
 });
