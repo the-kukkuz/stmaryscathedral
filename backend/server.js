@@ -5,7 +5,6 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Routers
 import memberRoutes from "./routes/memberRoutes.js";
 import familyRoutes from "./routes/familyRoutes.js";
 import marriageRoutes from "./routes/marriageRoutes.js";
@@ -15,54 +14,39 @@ import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 
 dotenv.config();
 const app = express();
-
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// -------------------
-// MongoDB Connection
-// -------------------
+// MongoDB connection
 mongoose
-  .connect(process.env.MONGO_URI, { dbName: "churchDB" })
+  .connect(process.env.MONGO_URI, {
+    dbName: "churchDB",
+  })
   .then(() => console.log("✅ MongoDB connected successfully"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// -------------------
-// API Routes
-// -------------------
-// Always use relative paths starting with "/"
-// Wrap route registration in a try/catch to prevent invalid path crash
-const safeUse = (path, router) => {
-  try {
-    if (!path.startsWith("/")) {
-      throw new Error(`Route path must start with "/": ${path}`);
-    }
-    app.use(path, router);
-  } catch (err) {
-    console.error(`❌ Skipping router due to invalid path: ${err.message}`);
-  }
-};
+// Routes
+app.use("/api/members", memberRoutes);
+app.use("/api/families", familyRoutes);
+app.use("/api/marriages", marriageRoutes);
+app.use("/api/baptisms", baptismRoutes);
+app.use("/api/deaths", deathRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
 
-safeUse("/api/members", memberRoutes);
-safeUse("/api/families", familyRoutes);
-safeUse("/api/marriages", marriageRoutes);
-safeUse("/api/baptisms", baptismRoutes);
-safeUse("/api/deaths", deathRoutes);
-safeUse("/api/subscriptions", subscriptionRoutes);
+// Root API endpoint
+app.get("/", (req, res) => {
+  res.send("✅ ChurchDB API is running");
+});
 
-// -------------------
 // Test endpoints
-// -------------------
-app.get("/", (req, res) => res.send("✅ ChurchDB API is running"));
-
 app.get("/api/test-db", async (req, res) => {
   try {
     const db = mongoose.connection.db;
     const collections = await db.listCollections().toArray();
     const counts = {};
     for (const col of collections) {
-      counts[col.name] = await db.collection(col.name).countDocuments();
+      const count = await db.collection(col.name).countDocuments();
+      counts[col.name] = count;
     }
     res.json({
       connected: mongoose.connection.readyState === 1,
@@ -71,27 +55,45 @@ app.get("/api/test-db", async (req, res) => {
       documentCounts: counts,
     });
   } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
+app.get("/api/test-subscriptions", async (req, res) => {
+  try {
+    const Subscription = mongoose.model("Subscription");
+    const count = await Subscription.countDocuments();
+    const all = await Subscription.find().limit(5);
+    res.json({
+      count,
+      collectionName: Subscription.collection.name,
+      sample: all,
+    });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // -------------------
-// Serve React Frontend
+// Serve React frontend
 // -------------------
+
+// Needed because we are using ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const reactBuildPath = path.join(__dirname, "../tnp-proj/build");
 
-app.use(express.static(reactBuildPath));
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, "../tnp-proj/build")));
 
+// Serve React for any route not handled by API
 app.get("*", (req, res) => {
-  res.sendFile(path.join(reactBuildPath, "index.html"));
+  res.sendFile(path.join(__dirname, "../tnp-proj/build", "index.html"));
 });
 
 // -------------------
-// Start Server
-// -------------------
+
 const PORT = process.env.PORT || 8080;
+console.log("Starting server...");
 app.listen(PORT, "0.0.0.0", () =>
-  console.log(`🚀 Server running on port ${PORT}`)
+  console.log(`🚀 Server running on http://localhost:${PORT}`)
 );
