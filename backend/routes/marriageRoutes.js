@@ -139,9 +139,9 @@ router.get("/search/:name", async (req, res) => {
 });
 
 // 🔍 Get marriages by date range
-router.get("/date-range/:startDate/:endDate", async (req, res) => {
+router.get("/date-range", async (req, res) => {
   try {
-    const { startDate, endDate } = req.params;
+    const { startDate, endDate } = req.query;
     const marriages = await Marriage.find({
       date: {
         $gte: new Date(startDate),
