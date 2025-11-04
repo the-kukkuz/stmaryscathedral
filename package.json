@@ -1,6 +1,13 @@
 {
+  "name": "my-fullstack-app",
+  "private": true,
+  "scripts": {
+    "install-all": "npm install --prefix frontend && npm install --prefix backend",
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "npm run start --prefix backend"
+  },
   "dependencies": {
     "react-icons": "^5.5.0"
   }
-  
 }
