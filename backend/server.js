@@ -5,6 +5,13 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import memberRoutes from "./routes/memberRoutes.js";
+import familyRoutes from "./routes/familyRoutes.js";
+import marriageRoutes from "./routes/marriageRoutes.js";
+import baptismRoutes from "./routes/baptismRoutes.js";
+import deathRoutes from "./routes/deathRoutes.js";
+import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+
 dotenv.config();
 const app = express();
 app.use(cors());
@@ -20,68 +27,60 @@ mongoose
   .then(() => console.log("✅ MongoDB connected successfully"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// Test routes one by one
-try {
-  console.log("Loading memberRoutes...");
-  const memberRoutes = await import("./routes/memberRoutes.js");
-  app.use("/api/members", memberRoutes.default);
-  console.log("✅ memberRoutes loaded");
-} catch (err) {
-  console.error("❌ Error loading memberRoutes:", err.message);
-}
+// API Routes
+app.use("/api/members", memberRoutes);
+app.use("/api/families", familyRoutes);
+app.use("/api/marriages", marriageRoutes);
+app.use("/api/baptisms", baptismRoutes);
+app.use("/api/deaths", deathRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
 
-try {
-  console.log("Loading familyRoutes...");
-  const familyRoutes = await import("./routes/familyRoutes.js");
-  app.use("/api/families", familyRoutes.default);
-  console.log("✅ familyRoutes loaded");
-} catch (err) {
-  console.error("❌ Error loading familyRoutes:", err.message);
-}
-
-try {
-  console.log("Loading marriageRoutes...");
-  const marriageRoutes = await import("./routes/marriageRoutes.js");
-  app.use("/api/marriages", marriageRoutes.default);
-  console.log("✅ marriageRoutes loaded");
-} catch (err) {
-  console.error("❌ Error loading marriageRoutes:", err.message);
-}
-
-try {
-  console.log("Loading baptismRoutes...");
-  const baptismRoutes = await import("./routes/baptismRoutes.js");
-  app.use("/api/baptisms", baptismRoutes.default);
-  console.log("✅ baptismRoutes loaded");
-} catch (err) {
-  console.error("❌ Error loading baptismRoutes:", err.message);
-}
-
-try {
-  console.log("Loading deathRoutes...");
-  const deathRoutes = await import("./routes/deathRoutes.js");
-  app.use("/api/deaths", deathRoutes.default);
-  console.log("✅ deathRoutes loaded");
-} catch (err) {
-  console.error("❌ Error loading deathRoutes:", err.message);
-}
-
-try {
-  console.log("Loading subscriptionRoutes...");
-  const subscriptionRoutes = await import("./routes/subscriptionRoutes.js");
-  app.use("/api/subscriptions", subscriptionRoutes.default);
-  console.log("✅ subscriptionRoutes loaded");
-} catch (err) {
-  console.error("❌ Error loading subscriptionRoutes:", err.message);
-}
-
+// Root API endpoint
 app.get("/api", (req, res) => {
   res.send("✅ ChurchDB API is running");
 });
 
+// Test endpoints
+app.get("/api/test-db", async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    const collections = await db.listCollections().toArray();
+    const counts = {};
+    for (const col of collections) {
+      const count = await db.collection(col.name).countDocuments();
+      counts[col.name] = count;
+    }
+    res.json({
+      connected: mongoose.connection.readyState === 1,
+      databaseName: db.databaseName,
+      collections: collections.map((c) => c.name),
+      documentCounts: counts,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
+app.get("/api/test-subscriptions", async (req, res) => {
+  try {
+    const Subscription = mongoose.model("Subscription");
+    const count = await Subscription.countDocuments();
+    const all = await Subscription.find().limit(5);
+    res.json({
+      count,
+      collectionName: Subscription.collection.name,
+      sample: all,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Serve static files from React build
 app.use(express.static(path.join(__dirname, "../tnp-proj/dist")));
 
-app.get("*", (req, res) => {
+// Catch-all route for React Router - use regex instead of "*"
+app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, "../tnp-proj/dist/index.html"));
 });
 
