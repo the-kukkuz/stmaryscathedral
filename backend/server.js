@@ -29,7 +29,7 @@ mongoose
   .then(() => console.log("✅ MongoDB connected successfully"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// Routes
+// API Routes - MUST come before static file serving
 app.use("/api/members", memberRoutes);
 app.use("/api/families", familyRoutes);
 app.use("/api/marriages", marriageRoutes);
@@ -78,18 +78,14 @@ app.get("/api/test-subscriptions", async (req, res) => {
   }
 });
 
-// -------------------
-
-// Serve React build (Vite)
+// Serve static files from React build
 app.use(express.static(path.join(__dirname, "../tnp-proj/dist")));
 
-// Serve React for any route not handled by API
+// Catch-all route - MUST be last
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../tnp-proj/dist/index.html"));
 });
 
-
 const PORT = process.env.PORT || 3000;
 console.log("Starting server...");
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-// -------------------
