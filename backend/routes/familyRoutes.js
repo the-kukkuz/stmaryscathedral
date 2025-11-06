@@ -29,6 +29,7 @@ router.get("/", async (req, res) => {
   }
 });
 
+// SPECIFIC ROUTE - Must come BEFORE /:id
 // Get family by family_number
 router.get("/number/:family_number", async (req, res) => {
   try {
@@ -40,6 +41,7 @@ router.get("/number/:family_number", async (req, res) => {
   }
 });
 
+// GENERIC /:id ROUTES - Must be LAST
 
 // Get single family
 router.get("/:id", async (req, res) => {
