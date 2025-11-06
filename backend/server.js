@@ -80,12 +80,14 @@ app.get("/api/test-subscriptions", async (req, res) => {
 
 // -------------------
 
-// Serve React build
-app.use(express.static(path.join(__dirname, "../tnp-proj/build")));
+// Serve React build (Vite)
+app.use(express.static(path.join(__dirname, "../tnp-proj/dist")));
+
 // Serve React for any route not handled by API
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../tnp-proj/build/index.html"));
+  res.sendFile(path.join(__dirname, "../tnp-proj/dist/index.html")));
 });
+
 
 const PORT = process.env.PORT || 3000;
 console.log("Starting server...");
