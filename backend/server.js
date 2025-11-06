@@ -38,7 +38,7 @@ app.use("/api/deaths", deathRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 
 // Root API endpoint
-app.get("/", (req, res) => {
+app.get("/api", (req, res) => {
   res.send("✅ ChurchDB API is running");
 });
 
