@@ -81,12 +81,12 @@ app.get("/api/test-subscriptions", async (req, res) => {
 // -------------------
 // Serve React frontend
 // -------------------
-app.use(express.static(path.join(__dirname, "../tnp-proj/build")));
+app.use(express.static(path.join(__dirname, "../tnp-proj")));
 
 // Serve React for any route not handled by API
 // Serve React fallback for any unknown route
 app.use((req, res) => {
-  res.sendFile(path.join(__dirname, "../tnp-proj/build", "index.html"));
+  res.sendFile(path.join(__dirname, "../tnp-proj", "index.html"));
 });
 
 // -------------------
