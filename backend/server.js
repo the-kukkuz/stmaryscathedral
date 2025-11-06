@@ -85,7 +85,7 @@ app.use(express.static(path.join(__dirname, "../tnp-proj/dist")));
 
 // Serve React for any route not handled by API
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../tnp-proj/dist/index.html")));
+  res.sendFile(path.join(__dirname, "../tnp-proj/dist/index.html"));
 });
 
 
