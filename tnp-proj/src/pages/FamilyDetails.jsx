@@ -11,7 +11,7 @@ const FamilyDetails = () => {
 
       <h2>Family ID: {familyId || "None"}</h2>
 
-      <div className="card" onClick={() => navigate("/add-family")}>
+      <div className="card" onClick={() => navigate("/AddFamily")}>
         <div className="card-details">
           <p className="text-title">ADD FAMILY</p>
         </div>
