@@ -38,15 +38,15 @@ function App() {
             <Route path="/About" element={<About />} />
             <Route path="/FamilyDetails" element={<FamilyDetails />} />
               <Route path="/FamilyDetails/:familyId" element={<FamilyDetails />} />
-
             <Route path="/AddFamily" element={<AddFamily />} />
             <Route path="/MemberDetails" element={<MemberDetails />} />
-            <Route path="/MemberDetails/:memberId" element={<MemberDetails />} />
+              <Route path="/MemberDetails/:memberId" element={<MemberDetails />} />
             <Route path="/AddMember" element={<AddMember />} />
             <Route path="/ExistingFamilymem" element={<ExistingFamilymem />} />
             <Route path="/ViewMembers" element={<ViewMembers />} />
             <Route path="/EditMember/:memberId" element={<EditMember />} />
-            <Route path="/Marriage/:marriageId" element={<Marriage />} />
+            <Route path="/Marriage" element={<Marriage />} />
+              <Route path="/Marriage/:marriageId" element={<Marriage />} />
             <Route path="/AddMarriage" element={<AddMarriage />} />
             <Route path="/ViewMarriage/:marriageId" element={<ViewMarriage />} />
             <Route path="/SignIn" element={<SignIn />} />
