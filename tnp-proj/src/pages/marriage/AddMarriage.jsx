@@ -19,7 +19,7 @@ const AddMarriage = () => {
 
   // Fetch all members on component mount
   useEffect(() => {
-    fetch("http://localhost:8080/api/members")
+    fetch("https://stmaryscathedral.onrender.com/api/members")
       .then((res) => res.json())
       .then((data) => {
         // Filter out deceased members
@@ -114,7 +114,7 @@ const AddMarriage = () => {
     };
 
     try {
-      const res = await fetch("http://localhost:8080/api/marriages", {
+      const res = await fetch("https://stmaryscathedral.onrender.com/api/marriages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

@@ -14,7 +14,7 @@ const Subscription = () => {
 
   // Fetch all families
   useEffect(() => {
-    fetch("http://localhost:8080/api/families")
+    fetch("https://stmaryscathedral.onrender.com/api/families")
       .then((res) => res.json())
       .then((data) => setFamilies(data))
       .catch((err) => console.error("Error fetching families:", err));
@@ -45,7 +45,7 @@ const Subscription = () => {
     try {
       setLoading(true);
       const res = await fetch(
-        `http://localhost:8080/api/subscriptions/family/${familyNumber}`
+        `https://stmaryscathedral.onrender.com/api/subscriptions/family/${familyNumber}`
       );
       const data = await res.json();
       setSubscriptionHistory(data);
@@ -135,7 +135,7 @@ const Subscription = () => {
     };
 
     try {
-      const res = await fetch("http://localhost:8080/api/subscriptions", {
+      const res = await fetch("https://stmaryscathedral.onrender.com/api/subscriptions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -173,7 +173,7 @@ const Subscription = () => {
         paid_date: newPaidStatus ? new Date().toISOString() : subscription.paid_date
       };
 
-      const res = await fetch(`http://localhost:8080/api/subscriptions/${subscription._id}`, {
+      const res = await fetch(`https://stmaryscathedral.onrender.com/api/subscriptions/${subscription._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

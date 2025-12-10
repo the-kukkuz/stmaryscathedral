@@ -12,7 +12,7 @@ const SearchedFam = () => {
   useEffect(() => {
     if (!family_number) return;
 
-    fetch(`http://localhost:8080/api/members?family_number=${family_number}`)
+    fetch(`https://stmaryscathedral.onrender.com/api/members?family_number=${family_number}`)
       .then((res) => res.json())
       .then((data) => setMembers(data))
       .catch((err) => {

@@ -13,7 +13,7 @@ const SearchBap = () => {
   const fetchBaptisms = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:8080/api/baptisms");
+      const res = await fetch("https://stmaryscathedral.onrender.com/api/baptisms");
       const data = await res.json();
       console.log("Fetched baptisms:", data); // Debug
       setBaptisms(data);

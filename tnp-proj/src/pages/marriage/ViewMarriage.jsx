@@ -26,7 +26,7 @@ const ViewMarriage = () => {
   const fetchMarriages = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:8080/api/marriages");
+      const res = await fetch("https://stmaryscathedral.onrender.com/api/marriages");
       const data = await res.json();
       setMarriages(data);
       setFilteredMarriages(data);
@@ -40,7 +40,7 @@ const ViewMarriage = () => {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/marriages/stats/overview");
+      const res = await fetch("https://stmaryscathedral.onrender.com/api/marriages/stats/overview");
       const data = await res.json();
       setStats(data);
     } catch (err) {
@@ -115,7 +115,7 @@ const ViewMarriage = () => {
     e.preventDefault();
     try {
       const res = await fetch(
-        `http://localhost:8080/api/marriages/${selectedMarriage._id}`,
+        `https://stmaryscathedral.onrender.com/api/marriages/${selectedMarriage._id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -142,7 +142,7 @@ const ViewMarriage = () => {
     }
 
     try {
-      const res = await fetch(`http://localhost:8080/api/marriages/${id}`, {
+      const res = await fetch(`https://stmaryscathedral.onrender.com/api/marriages/${id}`, {
         method: "DELETE"
       });
 

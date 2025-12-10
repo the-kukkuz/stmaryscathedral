@@ -85,6 +85,73 @@ router.get("/unbaptized-members/:familyNumber", async (req, res) => {
   }
 });
 
+// Utility route: Check member baptism status
+router.get("/check-member/:memberId", async (req, res) => {
+  try {
+    const member = await Member.findById(req.params.memberId);
+    if (!member) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
+    const baptismRecord = await Baptism.findOne({ member_id: req.params.memberId });
+    
+    res.json({
+      member: {
+        name: member.name,
+        baptism_field: member.baptism
+      },
+      has_baptism_record: !!baptismRecord,
+      baptism_record: baptismRecord || null,
+      status: baptismRecord ? "Baptized" : "Not Baptized"
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Utility route: Fix inconsistent baptism status
+router.post("/fix-baptism-status", async (req, res) => {
+  try {
+    // Get all baptism records
+    const baptisms = await Baptism.find();
+    
+    let fixed = 0;
+    for (const baptism of baptisms) {
+      const member = await Member.findById(baptism.member_id);
+      if (member && member.baptism !== true) {
+        member.baptism = true;
+        await member.save();
+        fixed++;
+      }
+    }
+
+    // Get all members marked as baptized but have no record
+    const baptizedMembers = await Member.find({ baptism: true });
+    let unmarked = 0;
+    
+    for (const member of baptizedMembers) {
+      const baptismRecord = await Baptism.findOne({ member_id: member._id });
+      if (!baptismRecord) {
+        // This member is marked baptized but has no record
+        console.log(`Member ${member.name} marked baptized but has no record`);
+        // Optionally uncomment to auto-fix:
+        // member.baptism = false;
+        // await member.save();
+        // unmarked++;
+      }
+    }
+
+    res.json({
+      message: "Baptism status check completed",
+      members_fixed: fixed,
+      members_without_records: unmarked,
+      total_baptism_records: baptisms.length
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Create new baptism record
 router.post("/", async (req, res) => {
   try {
@@ -253,73 +320,6 @@ router.delete("/:id", async (req, res) => {
     
     res.json({ 
       message: "Baptism record deleted successfully"
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Utility route: Check member baptism status
-router.get("/check-member/:memberId", async (req, res) => {
-  try {
-    const member = await Member.findById(req.params.memberId);
-    if (!member) {
-      return res.status(404).json({ error: "Member not found" });
-    }
-
-    const baptismRecord = await Baptism.findOne({ member_id: req.params.memberId });
-    
-    res.json({
-      member: {
-        name: member.name,
-        baptism_field: member.baptism
-      },
-      has_baptism_record: !!baptismRecord,
-      baptism_record: baptismRecord || null,
-      status: baptismRecord ? "Baptized" : "Not Baptized"
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Utility route: Fix inconsistent baptism status
-router.post("/fix-baptism-status", async (req, res) => {
-  try {
-    // Get all baptism records
-    const baptisms = await Baptism.find();
-    
-    let fixed = 0;
-    for (const baptism of baptisms) {
-      const member = await Member.findById(baptism.member_id);
-      if (member && member.baptism !== true) {
-        member.baptism = true;
-        await member.save();
-        fixed++;
-      }
-    }
-
-    // Get all members marked as baptized but have no record
-    const baptizedMembers = await Member.find({ baptism: true });
-    let unmarked = 0;
-    
-    for (const member of baptizedMembers) {
-      const baptismRecord = await Baptism.findOne({ member_id: member._id });
-      if (!baptismRecord) {
-        // This member is marked baptized but has no record
-        console.log(`Member ${member.name} marked baptized but has no record`);
-        // Optionally uncomment to auto-fix:
-        // member.baptism = false;
-        // await member.save();
-        // unmarked++;
-      }
-    }
-
-    res.json({
-      message: "Baptism status check completed",
-      members_fixed: fixed,
-      members_without_records: unmarked,
-      total_baptism_records: baptisms.length
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

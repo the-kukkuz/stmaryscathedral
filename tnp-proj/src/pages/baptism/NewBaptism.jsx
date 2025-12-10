@@ -82,7 +82,7 @@ const NewBaptism = () => {
     try {
       setSearchLoading(true);
       console.log("Searching for:", familySearch); // Debug
-      const res = await fetch(`http://localhost:8080/api/baptisms/search-families/${familySearch}`);
+      const res = await fetch(`https://stmaryscathedral.onrender.com/api/baptisms/search-families/${familySearch}`);
       
       if (!res.ok) {
         console.error("Search failed:", res.status);
@@ -105,7 +105,7 @@ const NewBaptism = () => {
 
   const fetchHeadsOfFamily = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/baptisms/heads-of-family/${selectedFamilyName}`);
+      const res = await fetch(`https://stmaryscathedral.onrender.com/api/baptisms/heads-of-family/${selectedFamilyName}`);
       const data = await res.json();
       setHeadsOfFamily(data);
       
@@ -123,7 +123,7 @@ const NewBaptism = () => {
   const fetchUnbaptizedMembers = async (familyNumber) => {
     try {
       console.log("Fetching unbaptized members for family:", familyNumber);
-      const res = await fetch(`http://localhost:8080/api/baptisms/unbaptized-members/${familyNumber}`);
+      const res = await fetch(`https://stmaryscathedral.onrender.com/api/baptisms/unbaptized-members/${familyNumber}`);
       
       if (!res.ok) {
         console.error("Failed to fetch members:", res.status);
@@ -174,7 +174,7 @@ const NewBaptism = () => {
         ...formData
       };
 
-      const res = await fetch('http://localhost:8080/api/baptisms', {
+      const res = await fetch('https://stmaryscathedral.onrender.com/api/baptisms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

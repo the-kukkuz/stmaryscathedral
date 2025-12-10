@@ -104,23 +104,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// 📜 Get One Marriage
-router.get("/:id", async (req, res) => {
-  try {
-    const marriage = await Marriage.findById(req.params.id)
-      .populate('spouse1_id')
-      .populate('spouse2_id');
-      
-    if (!marriage) {
-      return res.status(404).json({ error: "Marriage not found" });
-    }
-    
-    res.json(marriage);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // 🔍 Search marriages by spouse name
 router.get("/search/:name", async (req, res) => {
   try {
@@ -139,9 +122,9 @@ router.get("/search/:name", async (req, res) => {
 });
 
 // 🔍 Get marriages by date range
-router.get("/date-range/:startDate/:endDate", async (req, res) => {
+router.get("/date-range", async (req, res) => {
   try {
-    const { startDate, endDate } = req.params;
+    const { startDate, endDate } = req.query;
     const marriages = await Marriage.find({
       date: {
         $gte: new Date(startDate),
@@ -170,6 +153,57 @@ router.get("/year/:year", async (req, res) => {
     }).sort({ date: -1 });
     
     res.json(marriages);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 📊 Get Marriage Statistics
+router.get("/stats/overview", async (req, res) => {
+  try {
+    const totalMarriages = await Marriage.countDocuments();
+    const currentYear = new Date().getFullYear();
+    
+    const marriagesThisYear = await Marriage.countDocuments({
+      date: {
+        $gte: new Date(currentYear, 0, 1),
+        $lte: new Date(currentYear, 11, 31)
+      }
+    });
+    
+    const marriagesByYear = await Marriage.aggregate([
+      {
+        $group: {
+          _id: { $year: "$date" },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: -1 } },
+      { $limit: 5 }
+    ]);
+    
+    res.json({
+      totalMarriages,
+      marriagesThisYear,
+      marriagesByYear
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 📜 Get One Marriage
+router.get("/:id", async (req, res) => {
+  try {
+    const marriage = await Marriage.findById(req.params.id)
+      .populate('spouse1_id')
+      .populate('spouse2_id');
+      
+    if (!marriage) {
+      return res.status(404).json({ error: "Marriage not found" });
+    }
+    
+    res.json(marriage);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -215,40 +249,6 @@ router.delete("/:id", async (req, res) => {
     });
     
     res.json({ message: "Marriage record deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 📊 Get Marriage Statistics
-router.get("/stats/overview", async (req, res) => {
-  try {
-    const totalMarriages = await Marriage.countDocuments();
-    const currentYear = new Date().getFullYear();
-    
-    const marriagesThisYear = await Marriage.countDocuments({
-      date: {
-        $gte: new Date(currentYear, 0, 1),
-        $lte: new Date(currentYear, 11, 31)
-      }
-    });
-    
-    const marriagesByYear = await Marriage.aggregate([
-      {
-        $group: {
-          _id: { $year: "$date" },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: -1 } },
-      { $limit: 5 }
-    ]);
-    
-    res.json({
-      totalMarriages,
-      marriagesThisYear,
-      marriagesByYear
-    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

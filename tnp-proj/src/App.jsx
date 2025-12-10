@@ -33,31 +33,37 @@ function App() {
       <Navbar />
       
       <div style={{ paddingTop: '120px' }}>
-        <Routes> 
-          <Route path="/" element={<Home />} />
-          <Route path="/About" element={<About />} />
-          <Route path="/FamilyDetails" element={<FamilyDetails />} />
-          <Route path="/AddFamily" element={<AddFamily />} />
-          <Route path="/MemberDetails" element={<MemberDetails />} />
-          <Route path="/AddMember" element={<AddMember />} />
-          <Route path="/ExistingFamilymem" element={<ExistingFamilymem />} />
-          <Route path="/ViewMembers" element={<ViewMembers />} />
-          <Route path="/EditMember" element={<EditMember />} />
-          <Route path="/Marriage" element={<Marriage />} />
-          <Route path="/AddMarriage" element={<AddMarriage />} />
-          <Route path="/ViewMarriage" element={<ViewMarriage />} />
-          <Route path="/SignIn" element={<SignIn />} />
-          <Route path="/SearchFamily" element={<SearchFamily />} />
-          <Route path="/baptism" element={<Baptism />} />
-          <Route path="/death-records" element={<DeathRecords />} />
-          <Route path="/subscription" element={<Subscription />} />
-          <Route path="/SearchBap" element={<SearchBap />} />
-          <Route path="/NewBaptism" element={<NewBaptism />} />
-          <Route path="/AddDeathRecord" element={<AddDeathRecord />} />
-          <Route path="/ViewDeathRecords" element={<ViewDeathRecords />} />
-          <Route path="/SearchedFam" element={<SearchedFam />} />
-        </Routes>
+          <Routes> 
+            <Route path="/" element={<Home />} />
+            <Route path="/About" element={<About />} />
+            <Route path="/FamilyDetails" element={<FamilyDetails />} />
+              <Route path="/FamilyDetails/:familyId" element={<FamilyDetails />} />
+            <Route path="/AddFamily" element={<AddFamily />} />
+            <Route path="/MemberDetails" element={<MemberDetails />} />
+              <Route path="/MemberDetails/:memberId" element={<MemberDetails />} />
+            <Route path="/AddMember" element={<AddMember />} />
+            <Route path="/ExistingFamilymem" element={<ExistingFamilymem />} />
+            <Route path="/ViewMembers" element={<ViewMembers />} />
+            <Route path="/EditMember" element={<EditMember />} />
+            <Route path="/EditMember/:memberId" element={<EditMember />} />
+            <Route path="/Marriage" element={<Marriage />} />
+              <Route path="/Marriage/:marriageId" element={<Marriage />} />
+            <Route path="/AddMarriage" element={<AddMarriage />} />
+            <Route path="/ViewMarriage" element={<EditMember />} />
+            <Route path="/ViewMarriage/:marriageId" element={<ViewMarriage />} />
+            <Route path="/SignIn" element={<SignIn />} />
+            <Route path="/SearchFamily" element={<SearchFamily />} />
+            <Route path="/baptism" element={<Baptism />} />
+            <Route path="/death-records" element={<DeathRecords />} />
+            <Route path="/subscription" element={<Subscription />} />
+            <Route path="/SearchBap" element={<SearchBap />} />
+            <Route path="/NewBaptism" element={<NewBaptism />} />
+            <Route path="/AddDeathRecord" element={<AddDeathRecord />} />
+            <Route path="/ViewDeathRecords" element={<ViewDeathRecords />} />
+            <Route path="/SearchedFam" element={<SearchedFam />} />
+          </Routes>
       </div>
+
     </>
   );
 }

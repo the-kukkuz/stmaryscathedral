@@ -13,7 +13,9 @@ const ViewDeathRecords = () => {
   const fetchRecords = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:8080/api/deaths");
+      const API = import.meta.env.VITE_API_URL;
+      const res = await fetch(`${API}/api/deaths`);
+
       if (!res.ok) throw new Error("Failed to fetch death records");
       const data = await res.json();
       setRecords(data);

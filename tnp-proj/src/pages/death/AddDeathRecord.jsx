@@ -30,7 +30,7 @@ const AddDeathRecord = () => {
 
   // Fetch families on mount
   useEffect(() => {
-    fetch("http://localhost:8080/api/families")
+    fetch("https://stmaryscathedral.onrender.com/api/families")
       .then((res) => res.json())
       .then((data) => setFamilies(data))
       .catch((err) => console.error("Error fetching families:", err));
@@ -52,7 +52,7 @@ const AddDeathRecord = () => {
   // Fetch members when family selected
   useEffect(() => {
     if (selectedHof) {
-      fetch(`http://localhost:8080/api/members?family_number=${selectedFamily.family_number}`)
+      fetch(`https://stmaryscathedral.onrender.com/api/members?family_number=${selectedFamily.family_number}`)
         .then((res) => res.json())
         .then((data) => setMembers(data))
         .catch((err) => console.error("Error fetching members:", err));
@@ -127,7 +127,7 @@ const AddDeathRecord = () => {
     };
 
     try {
-      const res = await fetch("http://localhost:8080/api/deaths", {
+      const res = await fetch("https://stmaryscathedral.onrender.com/api/deaths", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

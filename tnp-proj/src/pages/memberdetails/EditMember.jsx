@@ -27,7 +27,7 @@ const EditMember = () => {
 
   // ✅ Fetch all families on load
   useEffect(() => {
-    fetch("http://localhost:8080/api/families")
+    fetch("https://stmaryscathedral.onrender.com/api/families")
       .then((res) => res.json())
       .then((data) => setFamilies(data))
       .catch((err) => console.error("❌ Error fetching families:", err));
@@ -94,7 +94,7 @@ const EditMember = () => {
   const fetchMembers = async (family_number) => {
     try {
       const res = await fetch(
-        `http://localhost:8080/api/members?family_number=${family_number}`
+        `https://stmaryscathedral.onrender.com/api/members?family_number=${family_number}`
       );
       if (!res.ok) throw new Error("Failed to fetch members");
       const data = await res.json();
@@ -161,7 +161,7 @@ const EditMember = () => {
       };
 
       const res = await fetch(
-        `http://localhost:8080/api/members/${selectedMember}`,
+        `https://stmaryscathedral.onrender.com/api/members/${selectedMember}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

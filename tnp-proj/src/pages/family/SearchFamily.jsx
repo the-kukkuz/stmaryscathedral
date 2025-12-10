@@ -8,7 +8,7 @@ const SearchFamily = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/families") // adjust if deployed
+    fetch("https://stmaryscathedral.onrender.com/api/families") // adjust if deployed
       .then((res) => res.json())
       .then((data) => setFamilies(data))
       .catch((err) => console.error("Error fetching families:", err));

@@ -26,7 +26,7 @@ const AddFamily = () => {
 const handleSubmit = async (e) => {
   e.preventDefault();
   try {
-    const res = await axios.post("http://localhost:8080/api/families", form);
+    const res = await axios.post("https://stmaryscathedral.onrender.com/api/families", form);
 
     if (res.status === 201 || res.status === 200) {
       alert("✅ Family added successfully!");

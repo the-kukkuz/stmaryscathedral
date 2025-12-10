@@ -42,7 +42,7 @@ const ExistingFamilymem = () => {
     try {
       if (!familyNumber) return;
       const res = await fetch(
-        `http://localhost:8080/api/families/number/${familyNumber}`
+        `https://stmaryscathedral.onrender.com/api/families/number/${familyNumber}`
       );
       if (!res.ok) throw new Error("Family not found");
       const data = await res.json();
@@ -92,7 +92,7 @@ const ExistingFamilymem = () => {
         baptism: formData.baptismStatus === "Yes",
       };
 
-      const res = await fetch("http://localhost:8080/api/members", {
+      const res = await fetch("https://stmaryscathedral.onrender.com/api/members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
