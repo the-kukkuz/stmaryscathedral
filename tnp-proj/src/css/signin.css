@@ -1,8 +1,7 @@
- .form {
-  background: #111111;
-  box-shadow: 0px 187px 75px rgba(0, 0, 0, 0.01),
-    0px 105px 63px rgba(0, 0, 0, 0.05), 0px 47px 47px rgba(0, 0, 0, 0.09),
-    0px 12px 26px rgba(0, 0, 0, 0.1), 0px 0px 0px rgba(0, 0, 0, 0.1);
+.form {
+  background: #f4f1ee; /* Light sand background */
+  box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.05),
+              0px 5px 15px rgba(0, 0, 0, 0.05);
   width: 320px;
   display: flex;
   flex-direction: column;
@@ -11,51 +10,54 @@
   position: relative;
   border-radius: 25px;
 }
+
 .form .label {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  height: -moz-fit-content;
   height: fit-content;
 }
+
 .form .label:has(input:focus) .title {
   top: 0;
   left: 0;
-  color: #d17842;
+  color: #8b5e3c; /* Rich brown on focus */
 }
+
 .form .label .title {
   padding: 0 10px;
   transition: all 300ms;
   font-size: 12px;
-  color: #8b8e98;
+  color: #3e2c23; /* Dark text for labels */
   font-weight: 600;
-  width: -moz-fit-content;
   width: fit-content;
   top: 14px;
   position: relative;
   left: 15px;
-  background: #111111;
+  background: #f4f1ee; /* matches form background */
 }
+
 .form .input-field {
   width: auto;
   height: 50px;
   text-indent: 15px;
   border-radius: 15px;
   outline: none;
-  background-color: transparent;
-  border: 1px solid #21262e;
+  background-color: #fff; /* white inputs */
+  border: 1px solid #8b8e98; /* gray border */
   transition: all 0.3s;
-  caret-color: #d17842;
-  color: #aeaeae;
+  caret-color: #d17842; /* orange caret */
+  color: #3e2c23; /* dark text */
 }
 
 .form .input-field:hover {
-  border-color: rgba(209, 121, 66, 0.5);
+  border-color: #d17842; /* warm orange on hover */
 }
 
 .form .input-field:focus {
-  border-color: #111111;
+  border-color: #8b5e3c; /* dark brown on focus */
 }
+
 .form .split {
   display: flex;
   flex-direction: row;
@@ -63,9 +65,12 @@
   width: 100%;
   gap: 15px;
 }
+
 .form .split label {
   width: 130px;
+  color: #3e2c23; /* dark label text */
 }
+
 .form .checkout-btn {
   margin-top: 20px;
   padding: 20px 0;
@@ -74,23 +79,21 @@
   transition: all 0.3s cubic-bezier(0.15, 0.83, 0.66, 1);
   cursor: pointer;
   font-size: 20px;
-  font-weight: 500;
   display: flex;
   align-items: center;
-  border: none;
   justify-content: center;
-  fill: #fff;
-  color: #fff;
+  border: none;
+  color: #fff; /* button text white */
+  background: #8b5e3c; /* rich brown button */
   border: 2px solid transparent;
-  background: #191F2E;
-  transition: all 200ms;
-}
-.form .checkout-btn:active {
-  scale: 0.95;
 }
 
 .form .checkout-btn:hover {
-  color: #ffffff;
-  border: 2px solid #191F2E;
-  background: transparent;
+  color: #8b5e3c; /* text changes to brown */
+  border: 2px solid #8b5e3c; 
+  background: #f4f1ee; /* background turns sand */
+}
+
+.form .checkout-btn:active {
+  scale: 0.95;
 }

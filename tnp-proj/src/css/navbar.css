@@ -9,6 +9,7 @@ body {
   background-color: #f4f1ee;
 }
 
+/* Navbar */
 .navbar {
   width: 100%;
   height: 100px;
@@ -16,7 +17,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 1rem;
+  padding: 0 2rem;
   position: fixed;
   top: 0;
   left: 0;
@@ -24,6 +25,7 @@ body {
   border-bottom: 2px solid #8b5e3c; /* Rich earthy brown */
 }
 
+/* Left side: logo + title */
 .navbar-left {
   display: flex;
   align-items: center;
@@ -31,7 +33,6 @@ body {
 }
 
 .logo-wrapper {
-  margin-left: 40px;
   width: 70px;
   height: 70px;
   border-radius: 50%;
@@ -62,8 +63,10 @@ body {
   max-width: 400px;
   line-height: 1.2;
   cursor: pointer;
+  white-space: nowrap;
 }
 
+/* Right side: nav items */
 .navbar-right {
   display: flex;
   gap: 1.5rem;
@@ -74,10 +77,106 @@ body {
   color: #4f6f52; /* Forest Green */
   font-weight: 600;
   cursor: pointer;
-  margin-right: 40px;
   transition: color 0.3s ease;
 }
 
 .navbar-right span:hover {
   color: #3e2c23;
+}
+
+/* ========================= */
+/* RESPONSIVE NAVBAR STYLES  */
+/* ========================= */
+
+/* Tablets: 600px - 900px */
+@media (max-width: 900px) {
+  .navbar {
+    padding: 0 1.5rem;
+    height: 90px;
+  }
+
+  .logo-wrapper {
+    width: 60px;
+    height: 60px;
+  }
+
+  .logo {
+    width: 55px;
+    height: 55px;
+  }
+
+  .site-title {
+    font-size: 1.2rem;
+  }
+
+  .navbar-right span {
+    font-size: 16px;
+  }
+}
+
+/* Phones: 400px - 599px */
+@media (max-width: 599px) {
+  .navbar {
+    flex-direction: column;
+    height: auto;
+    padding: 0.5rem 1rem;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .navbar-left {
+    gap: 1rem;
+  }
+
+  .logo-wrapper {
+    width: 50px;
+    height: 50px;
+  }
+
+  .logo {
+    width: 45px;
+    height: 45px;
+  }
+
+  .site-title {
+    font-size: 1.1rem;
+  }
+
+  .navbar-right {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 5px;
+  }
+
+  .navbar-right span {
+    font-size: 14px;
+    margin-right: 0;
+  }
+}
+
+/* Small phones: <= 400px */
+@media (max-width: 400px) {
+  .navbar {
+    padding: 0.5rem;
+  }
+
+  .logo-wrapper {
+    width: 45px;
+    height: 45px;
+  }
+
+  .logo {
+    width: 40px;
+    height: 40px;
+  }
+
+  .site-title {
+    font-size: 1rem;
+  }
+
+  .navbar-right span {
+    font-size: 13px;
+  }
 }
