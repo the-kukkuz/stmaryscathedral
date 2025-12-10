@@ -2,7 +2,7 @@ import React from 'react';
 import '../css/navbar.css';
 import pic1 from '../assets/images/logo.jpg'; 
 import { useNavigate } from 'react-router-dom';  
-
+import PdfGenerator from "../components/pdfGenerator";
 const Navbar = () => {
   const navigate = useNavigate();
 
@@ -20,6 +20,7 @@ const Navbar = () => {
         <span onClick={() => navigate('/')} className="nav-link">Home</span>
         <span onClick={() => navigate('/About')} className="nav-link">About</span>
         <span onClick={() => navigate('/SignIn')} className="nav-link">Sign In</span>
+        <PdfGenerator/>
       </div>
     </nav>
   );

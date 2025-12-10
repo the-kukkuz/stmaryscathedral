@@ -46,6 +46,7 @@ body {
 /* Container around member table */
 .member-table-container1 {
   max-width: 90%;
+  scale:0.75;
   margin: 40px auto;
   padding: 24px;
   border-radius: 16px;
@@ -62,18 +63,10 @@ body {
   color: #4e3d2c;
   font-weight: 700;
 }
-
 /* Table wrapper */
 .table-wrapper1 {
   overflow-x: auto;
-}
-
-/* Table styling */
-.member-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: 'Segoe UI', sans-serif;
-  background-color: #fffdfb;
+  max-width: 100%;
 }
 
 /* Table headers and cells */
@@ -82,17 +75,22 @@ body {
   padding: 14px 18px;
   text-align: left;
   border-bottom: 1px solid #e8e2d9;
-  white-space: nowrap;
+  white-space: normal;       /* allow wrapping */
+  word-break: break-word;    /* break long words */
   color: #3d2c1e;
   font-size: 0.95rem;
 }
 
-/* Table headers */
+/* Sticky header (optional) */
 .member-table th {
   background-color: #f1ebe4;
   font-weight: 600;
   color: #5a4a3b;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
+
 
 /* Row hover effect */
 .member-table tbody tr:hover {

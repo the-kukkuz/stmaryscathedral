@@ -27,11 +27,12 @@ import AddDeathRecord from './pages/death/AddDeathRecord'; // 🔺 Add this
 import ViewDeathRecords from './pages/death/ViewDeathRecords'; // 🔺 Add this
 import EditMember from './pages/memberdetails/EditMember';
 
+
 function App() {
   return (
     <>
       <Navbar />
-      
+     
       <div style={{ paddingTop: '120px' }}>
           <Routes> 
             <Route path="/" element={<Home />} />
