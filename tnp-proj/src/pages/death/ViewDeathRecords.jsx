@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "../../css/viewdeath.css";
+import { FaDirections } from "react-icons/fa";
 
 const ViewDeathRecords = () => {
   const [records, setRecords] = useState([]);
@@ -61,6 +62,7 @@ const ViewDeathRecords = () => {
         style={{
           display: "flex",
           justifyContent: "space-between",
+          flexDirection:"column",
           alignItems: "center",
           marginBottom: "20px",
           background: "white",
