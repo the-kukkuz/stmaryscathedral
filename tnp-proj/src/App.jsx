@@ -54,6 +54,7 @@ function App() {
             <Route path="/ViewMarriage/:marriageId" element={<ViewMarriage />} />
             <Route path="/SignIn" element={<SignIn />} />
             <Route path="/SearchFamily" element={<SearchFamily />} />
+            <Route path="/family/:family_number" element={<FamilyDetails />} />
             <Route path="/baptism" element={<Baptism />} />
             <Route path="/death-records" element={<DeathRecords />} />
             <Route path="/subscription" element={<Subscription />} />
