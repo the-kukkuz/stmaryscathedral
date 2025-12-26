@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "../../css/viewbaptism.css";
+import { generateTablePdf, generateBaptismCertificatePdf } from "../../utils/pdfExport";
 
 const SearchBap = () => {
   const [baptisms, setBaptisms] = useState([]);
@@ -87,24 +88,86 @@ const SearchBap = () => {
         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.08)'
       }}>
         <h2>Baptism Records ({filteredBaptisms.length})</h2>
-        <button 
-          onClick={fetchBaptisms}
-          style={{
-            padding: '12px 24px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '15px',
-            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
-            transition: 'all 0.3s ease'
-          }}
-        >
-          🔄 Refresh
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={fetchBaptisms}
+            style={{
+              padding: '12px 24px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '15px',
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            🔄 Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const columns = [
+                { key: 'slNo', header: 'Sl No', width: 0.8 },
+                { key: 'familyNumber', header: 'Family Number', width: 1.1 },
+                { key: 'familyName', header: 'Family Name', width: 1.2 },
+                { key: 'hof', header: 'Head of Family', width: 1.4 },
+                { key: 'memberName', header: 'Member Name', width: 1.4 },
+                { key: 'gender', header: 'Gender', width: 0.9 },
+                { key: 'dob', header: 'Date of Birth', width: 1.2 },
+                { key: 'age', header: 'Age', width: 0.8 },
+                { key: 'baptName', header: 'Baptism Name', width: 1.4 },
+                { key: 'baptDate', header: 'Date of Baptism', width: 1.2 },
+                { key: 'placeOfBaptism', header: 'Place of Baptism', width: 1.6 },
+                { key: 'churchWhereBaptised', header: 'Church Where Baptised', width: 1.8 },
+                { key: 'godparentName', header: 'Godparent Name', width: 1.4 },
+                { key: 'godparentHouse', header: 'Godparent House', width: 1.4 },
+                { key: 'certificateNumber', header: 'Certificate No.', width: 1.1 },
+                { key: 'remarks', header: 'Remarks', width: 1 },
+              ];
+              const rows = filteredBaptisms.map((bap, index) => ({
+                slNo: index + 1,
+                familyNumber: bap.family_number,
+                familyName: bap.family_name,
+                hof: bap.hof,
+                memberName: bap.member_name,
+                gender: bap.gender,
+                dob: formatDate(bap.member_dob),
+                age: `${calculateAge(bap.member_dob)} years`,
+                baptName: bap.bapt_name,
+                baptDate: formatDate(bap.date_of_baptism),
+                placeOfBaptism: bap.place_of_baptism || 'N/A',
+                churchWhereBaptised: bap.church_where_baptised || 'N/A',
+                godparentName: bap.godparent_name || 'N/A',
+                godparentHouse: bap.godparent_house_name || 'N/A',
+                certificateNumber: bap.certificate_number || 'N/A',
+                remarks: bap.remarks || '-',
+              }));
+              generateTablePdf({
+                title: 'Baptism Records',
+                columns,
+                rows,
+                fileName: 'baptism_records.pdf',
+              });
+            }}
+            style={{
+              padding: '12px 24px',
+              background: '#8b5e3c',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '15px',
+            }}
+          >
+            Download PDF
+          </button>
+        </div>
       </div>
+
 
       {loading ? (
         <div style={{ 
@@ -161,6 +224,15 @@ const SearchBap = () => {
                     <td>{bap.godparent_house_name || "N/A"}</td>
                     <td>{bap.certificate_number || "N/A"}</td>
                     <td>{bap.remarks || "-"}</td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => generateBaptismCertificatePdf(bap)}
+                        className="submit-btn"
+                      >
+                        Certificate
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (

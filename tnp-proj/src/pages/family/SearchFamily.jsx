@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../../css/searchfamily.css";
 import { useNavigate } from "react-router-dom";
+import { generateTablePdf } from "../../utils/pdfExport";
 
 const SearchFamily = () => {
   const [families, setFamilies] = useState([]);
@@ -42,7 +43,35 @@ const SearchFamily = () => {
       </div>
 
       <div className="member-table-container1">
-        <h2>FAMILIES</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <h2>FAMILIES ({filteredFamilies.length})</h2>
+          <button
+            type="button"
+            onClick={() => {
+              const columns = [
+                { key: "slNo", header: "Sl No" },
+                { key: "familyNumber", header: "Family No" },
+                { key: "familyName", header: "Family Name" },
+                { key: "hof", header: "Head of Family" },
+              ];
+              const rows = filteredFamilies.map((fam, index) => ({
+                slNo: index + 1,
+                familyNumber: fam.family_number,
+                familyName: fam.name,
+                hof: fam.hof,
+              }));
+              generateTablePdf({
+                title: "Family List",
+                columns,
+                rows,
+                fileName: "families.pdf",
+              });
+            }}
+            className="submit-btn"
+          >
+            Download PDF
+          </button>
+        </div>
         <div className="table-wrapper1">
           <table className="member-table">
             <thead>

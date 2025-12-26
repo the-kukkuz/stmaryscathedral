@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../../css/viewdeath.css";
 import { FaDirections } from "react-icons/fa";
+import { generateTablePdf, generateDeathCertificatePdf } from "../../utils/pdfExport";
 
 const ViewDeathRecords = () => {
   const [records, setRecords] = useState([]);
@@ -72,23 +73,84 @@ const ViewDeathRecords = () => {
         }}
       >
         <h2>Death Records ({filteredRecords.length})</h2>
-        <button
-          onClick={fetchRecords}
-          style={{
-            padding: "12px 24px",
-            background: "linear-gradient(135deg, #ff6a00 0%, #ee0979 100%)",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontWeight: "600",
-            fontSize: "15px",
-            boxShadow: "0 4px 12px rgba(238, 9, 121, 0.4)",
-            transition: "all 0.3s ease",
-          }}
-        >
-          🔄 Refresh
-        </button>
+        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+          <button
+            onClick={fetchRecords}
+            style={{
+              padding: "12px 24px",
+              background: "linear-gradient(135deg, #ff6a00 0%, #ee0979 100%)",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "600",
+              fontSize: "15px",
+              boxShadow: "0 4px 12px rgba(238, 9, 121, 0.4)",
+              transition: "all 0.3s ease",
+            }}
+          >
+            🔄 Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const columns = [
+                { key: "slNo", header: "Sl No" },
+                { key: "familyNo", header: "Family No" },
+                { key: "name", header: "Name" },
+                { key: "houseName", header: "House Name" },
+                { key: "addressPlace", header: "Address/Place" },
+                { key: "fatherHusbandName", header: "Father/Husband Name" },
+                { key: "motherWifeName", header: "Mother/Wife Name" },
+                { key: "deathDate", header: "Death Date" },
+                { key: "burialDate", header: "Burial Date" },
+                { key: "age", header: "Age" },
+                { key: "conductedBy", header: "Conducted by" },
+                { key: "causeOfDeath", header: "Cause of Death" },
+                { key: "cellNo", header: "Cell No" },
+                { key: "remarks", header: "Remarks" },
+              ];
+              const rows = filteredRecords.map((rec, index) => ({
+                slNo: index + 1,
+                familyNo: rec.family_no,
+                name: rec.name,
+                houseName: rec.house_name || "-",
+                addressPlace: rec.address_place || "-",
+                fatherHusbandName: rec.father_husband_name || "-",
+                motherWifeName: rec.mother_wife_name || "-",
+                deathDate: rec.death_date
+                  ? new Date(rec.death_date).toLocaleDateString()
+                  : "-",
+                burialDate: rec.burial_date
+                  ? new Date(rec.burial_date).toLocaleDateString()
+                  : "-",
+                age: rec.age || "-",
+                conductedBy: rec.conducted_by || "-",
+                causeOfDeath: rec.cause_of_death || "-",
+                cellNo: rec.cell_no || "-",
+                remarks: rec.remarks || "-",
+              }));
+              generateTablePdf({
+                title: "Death Records",
+                columns,
+                rows,
+                fileName: "death_records.pdf",
+              });
+            }}
+            style={{
+              padding: "12px 24px",
+              background: "#8b5e3c",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "600",
+              fontSize: "15px",
+            }}
+          >
+            Download PDF
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -153,6 +215,15 @@ const ViewDeathRecords = () => {
                     <td>{rec.cause_of_death || "-"}</td>
                     <td>{rec.cell_no || "-"}</td>
                     <td>{rec.remarks || "-"}</td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => generateDeathCertificatePdf(rec)}
+                        className="submit-btn"
+                      >
+                        Certificate
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (

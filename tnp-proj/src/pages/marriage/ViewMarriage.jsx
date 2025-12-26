@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import "../../css/viewmarriage.css";
+import { generateTablePdf, generateMarriageCertificatePdf } from "../../utils/pdfExport";
 
 const ViewMarriage = () => {
   const [marriages, setMarriages] = useState([]);
@@ -207,15 +208,45 @@ const ViewMarriage = () => {
             ))}
           </select>
         </div>
-        <button
-          onClick={() => {
-            setSearchQuery("");
-            setFilterYear("");
-          }}
-          className="clear-filters-btn"
-        >
-          Clear Filters
-        </button>
+        <div className="filter-group" style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => {
+              setSearchQuery("");
+              setFilterYear("");
+            }}
+            className="clear-filters-btn"
+          >
+            Clear Filters
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const columns = [
+                { key: 'marriageId', header: 'Marriage ID' },
+                { key: 'groom', header: 'Groom' },
+                { key: 'bride', header: 'Bride' },
+                { key: 'date', header: 'Date' },
+                { key: 'place', header: 'Place' },
+              ];
+              const rows = filteredMarriages.map((marriage) => ({
+                marriageId: marriage.marriage_id,
+                groom: marriage.spouse1,
+                bride: marriage.spouse2,
+                date: formatDate(marriage.date),
+                place: marriage.place || 'N/A',
+              }));
+              generateTablePdf({
+                title: 'Marriage Records',
+                columns,
+                rows,
+                fileName: 'marriage_records.pdf',
+              });
+            }}
+            className="clear-filters-btn"
+          >
+            Download PDF
+          </button>
+        </div>
       </div>
 
       {/* Marriage Table */}
@@ -264,6 +295,14 @@ const ViewMarriage = () => {
                         title="Delete"
                       >
                         🗑️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => generateMarriageCertificatePdf(marriage)}
+                        className="btn-view"
+                        title="Download Certificate"
+                      >
+                        Certificate
                       </button>
                     </td>
                   </tr>
