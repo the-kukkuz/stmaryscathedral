@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../../css/deathadd.css";
+import { generateDeathCertificatePdf } from "../../utils/pdfExport";
 
 const AddDeathRecord = () => {
   const [families, setFamilies] = useState([]);
@@ -12,6 +13,7 @@ const AddDeathRecord = () => {
   const [isHof, setIsHof] = useState(false);
   const [nextHof, setNextHof] = useState("");
   const [isParishioner, setIsParishioner] = useState(true);
+  const [savedRecord, setSavedRecord] = useState(null);
 
 
   const blockUnits = {
@@ -221,6 +223,7 @@ const AddDeathRecord = () => {
       }
 
       alert("✅ Death record added successfully!");
+      setSavedRecord(data.death);
 
       // Reset form
       setSearchQuery("");
@@ -260,6 +263,17 @@ const AddDeathRecord = () => {
 
 
         <h2>Add Death Record</h2>
+
+        {/* Success banner with download */}
+        {savedRecord && (
+          <div style={{ background: '#e8f5e9', border: '1px solid #4caf50', borderRadius: '8px', padding: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+            <span style={{ color: '#2e7d32', fontWeight: 600 }}>✅ Death record saved successfully!</span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" className="submit-btn" style={{ background: '#8b5e3c' }} onClick={() => generateDeathCertificatePdf(savedRecord)}>📄 Download Certificate</button>
+              <button type="button" className="submit-btn" style={{ background: '#888' }} onClick={() => setSavedRecord(null)}>✕ Dismiss</button>
+            </div>
+          </div>
+        )}
 
         {/* Parishioner Toggle */}
         <div className="toggle-row">

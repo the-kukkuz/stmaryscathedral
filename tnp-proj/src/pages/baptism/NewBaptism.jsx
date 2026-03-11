@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../../css/deathadd.css';
+import { generateBaptismCertificatePdf } from '../../utils/pdfExport';
 
 const NewBaptism = () => {
   // Form states
@@ -38,6 +39,7 @@ const NewBaptism = () => {
 
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [savedRecord, setSavedRecord] = useState(null);
 
   // Search families as user types
   useEffect(() => {
@@ -238,6 +240,7 @@ const NewBaptism = () => {
       }
 
       alert('✅ Baptism record added successfully!');
+      setSavedRecord(data.data);
 
       // Reset form
       resetForm();
@@ -284,6 +287,17 @@ const NewBaptism = () => {
     <div className="container">
       <form className="register-form" onSubmit={handleSubmit}>
         <h2>Add New Baptism Record</h2>
+
+        {/* Success banner with download */}
+        {savedRecord && (
+          <div style={{ background: '#e8f5e9', border: '1px solid #4caf50', borderRadius: '8px', padding: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+            <span style={{ color: '#2e7d32', fontWeight: 600 }}>✅ Baptism record saved successfully!</span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" className="submit-btn" style={{ background: '#8b5e3c' }} onClick={() => generateBaptismCertificatePdf(savedRecord)}>📄 Download Certificate</button>
+              <button type="button" className="submit-btn" style={{ background: '#888' }} onClick={() => setSavedRecord(null)}>✕ Dismiss</button>
+            </div>
+          </div>
+        )}
 
         {/* Parishioner Toggle */}
         <div className="toggle-row">

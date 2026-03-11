@@ -28,11 +28,6 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="navbar-left">
-        {location.pathname !== '/' && location.pathname !== '/SignIn' && location.pathname !== '/About' && (
-          <button className="back-btn" onClick={() => navigate(-1)} title="Go Back">
-            ←
-          </button>
-        )}
         <div className="logo-wrapper" onClick={() => navigate('About')} role="button" tabIndex="0">
           <img src={pic1} alt="Church Logo" className="logo" />
         </div>

@@ -14,6 +14,8 @@ const ViewMarriage = () => {
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState({ totalMarriages: 0, marriagesThisYear: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const ROWS_PER_PAGE = 10;
 
   useEffect(() => {
     fetchMarriages();
@@ -63,7 +65,11 @@ const ViewMarriage = () => {
       );
     }
     setFilteredMarriages(filtered);
+    setCurrentPage(1);
   }, [searchQuery, filterYear, marriages]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMarriages.length / ROWS_PER_PAGE));
+  const paginatedMarriages = filteredMarriages.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -251,8 +257,8 @@ const ViewMarriage = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredMarriages.length > 0 ? (
-                filteredMarriages.map((marriage, index) => (
+              {paginatedMarriages.length > 0 ? (
+                paginatedMarriages.map((marriage, index) => (
                   <tr key={marriage._id}>
                     <td>{marriage.reg_no || "-"}</td>
                     <td>
@@ -310,6 +316,12 @@ const ViewMarriage = () => {
         </div>
       )}
 
+      {/* Pagination */}
+      <div className="pagination">
+        <button className="pagination-btn" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>← Prev</button>
+        <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+        <button className="pagination-btn" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next →</button>
+      </div>
       {/* MODAL — VIEW / EDIT */}
       {showModal && selectedMarriage && (
         <div className="modal-overlay" onClick={closeModal}>

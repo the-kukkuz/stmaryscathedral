@@ -7,6 +7,8 @@ const ViewDeathRecords = () => {
   const [records, setRecords] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ROWS_PER_PAGE = 10;
 
   // Edit modal state
   const [editModal, setEditModal] = useState(false);
@@ -119,6 +121,12 @@ const ViewDeathRecords = () => {
     );
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / ROWS_PER_PAGE));
+  const paginatedRecords = filteredRecords.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
+
+  // Reset to page 1 on search change
+  useEffect(() => { setCurrentPage(1); }, [search]);
+
   return (
     <div className="death-container">
 
@@ -224,7 +232,7 @@ const ViewDeathRecords = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredRecords.map((rec, index) => (
+              {paginatedRecords.map((rec, index) => (
                 <tr key={rec._id}>
                   <td>{rec.reg_no || "-"}</td>
                   <td>
@@ -264,6 +272,13 @@ const ViewDeathRecords = () => {
           </table>
         </div>
       )}
+
+      {/* Pagination */}
+      <div className="pagination">
+        <button className="pagination-btn" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>← Prev</button>
+        <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+        <button className="pagination-btn" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next →</button>
+      </div>
 
       {/* EDIT MODAL */}
       {editModal && (

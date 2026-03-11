@@ -6,6 +6,8 @@ const SearchBap = () => {
   const [baptisms, setBaptisms] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ROWS_PER_PAGE = 10;
 
   // Edit modal state
   const [editModal, setEditModal] = useState(false);
@@ -118,6 +120,11 @@ const SearchBap = () => {
       (b.isParishioner === false && "non parishioner".includes(s))
     );
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredBaptisms.length / ROWS_PER_PAGE));
+  const paginatedBaptisms = filteredBaptisms.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
+
+  useEffect(() => { setCurrentPage(1); }, [search]);
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -235,7 +242,7 @@ const SearchBap = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredBaptisms.map((bap, index) => (
+              {paginatedBaptisms.map((bap, index) => (
                 <tr key={bap._id}>
                   <td>{bap.reg_no || "-"}</td>
                   <td>{bap.family_number}</td>
@@ -267,6 +274,13 @@ const SearchBap = () => {
           </table>
         </div>
       )}
+
+      {/* Pagination */}
+      <div className="pagination">
+        <button className="pagination-btn" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>← Prev</button>
+        <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+        <button className="pagination-btn" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next →</button>
+      </div>
 
       {/* EDIT MODAL */}
       {editModal && (

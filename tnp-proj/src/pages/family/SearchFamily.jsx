@@ -6,6 +6,8 @@ import { generateTablePdf } from "../../utils/pdfExport";
 const SearchFamily = () => {
   const [families, setFamilies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ROWS_PER_PAGE = 10;
   const navigate = useNavigate();
 
   // ✅ Ward → Unit structure
@@ -104,6 +106,11 @@ const SearchFamily = () => {
     );
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredFamilies.length / ROWS_PER_PAGE));
+  const paginatedFamilies = filteredFamilies.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
+
+  useEffect(() => { setCurrentPage(1); }, [searchTerm]);
+
   return (
     <>
       {/* ================= SEARCH INPUT ================= */}
@@ -180,8 +187,8 @@ const SearchFamily = () => {
             </thead>
 
             <tbody>
-              {filteredFamilies.length > 0 ? (
-                filteredFamilies.map((fam) => (
+              {paginatedFamilies.length > 0 ? (
+                paginatedFamilies.map((fam) => (
                   <tr
                     key={fam._id}
                     style={{ cursor: "pointer" }}
@@ -213,6 +220,13 @@ const SearchFamily = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="pagination">
+          <button className="pagination-btn" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>← Prev</button>
+          <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+          <button className="pagination-btn" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next →</button>
         </div>
       </div>
     </>

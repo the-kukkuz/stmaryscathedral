@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import "../../css/addmarriage.css";
+import { generateMarriageCertificatePdf } from '../../utils/pdfExport';
 
 const AddMarriage = () => {
   const [groomSearch, setGroomSearch] = useState("");
@@ -34,6 +35,7 @@ const AddMarriage = () => {
     solemnized_by: "",
     officiant_number: ""
   });
+  const [savedRecord, setSavedRecord] = useState(null);
 
   // Fetch all members on component mount
   useEffect(() => {
@@ -200,6 +202,7 @@ const AddMarriage = () => {
       }
 
       alert("✅ Marriage record added successfully!");
+      setSavedRecord(data.marriage);
 
       // Reset
       setGroomSearch("");
@@ -237,6 +240,17 @@ const AddMarriage = () => {
   return (
     <>
       <div className="marriage-flex-container">
+
+        {/* Success banner with download */}
+        {savedRecord && (
+          <div style={{ background: '#e8f5e9', border: '1px solid #4caf50', borderRadius: '8px', padding: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', width: '100%' }}>
+            <span style={{ color: '#2e7d32', fontWeight: 600 }}>✅ Marriage record saved successfully!</span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" className="submit-btn" style={{ background: '#8b5e3c' }} onClick={() => generateMarriageCertificatePdf(savedRecord)}>📄 Download Certificate</button>
+              <button type="button" className="submit-btn" style={{ background: '#888' }} onClick={() => setSavedRecord(null)}>✕ Dismiss</button>
+            </div>
+          </div>
+        )}
 
         {/* ================= GROOM SECTION ================= */}
         <div className="marriage-card">
