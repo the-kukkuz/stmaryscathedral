@@ -12,13 +12,15 @@ import baptismRoutes from "./routes/baptismRoutes.js";
 import deathRoutes from "./routes/deathRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ensure env loads regardless of where node is started from.
+dotenv.config({ path: path.join(__dirname, ".env") });
+
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 mongoose
   .connect(process.env.MONGO_URI, {

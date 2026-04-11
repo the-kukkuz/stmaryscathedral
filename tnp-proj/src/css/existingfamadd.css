@@ -92,6 +92,80 @@ h2 {
   box-shadow: var(--shadow-sm);
 }
 
+/* Completion Section Styles */
+.completion-section {
+  margin-top: 32px;
+  padding: 24px;
+  background: linear-gradient(135deg, #f5f3ef 0%, #ebe7e0 100%);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--brown-200);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.member-count-display {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 1.1rem;
+}
+
+.count-label {
+  color: var(--brown-700);
+  font-weight: 600;
+}
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: var(--brown-500);
+  color: white;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(141, 110, 99, 0.3);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.complete-btn {
+  width: 100%;
+  max-width: 300px;
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+  border: none;
+  padding: 14px 24px;
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s var(--ease);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+}
+
+.complete-btn:hover {
+  background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4);
+}
+
+.complete-btn:active {
+  transform: translateY(0);
+}
+
 .signin-text {
   text-align: center;
   margin-top: 16px;

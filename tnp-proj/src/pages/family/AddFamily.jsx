@@ -66,7 +66,6 @@ const AddFamily = () => {
     family_number: "",
     name: "",
     hof: "",
-    count: "",
     location: "",
     village: "",
     contact_number: ""
@@ -121,7 +120,8 @@ const AddFamily = () => {
 
       navigate("/ExistingFamilymem", {
         state: {
-          family_number: form.family_number
+          family_number: form.family_number,
+          isNewFamily: true
         }
       });
 
@@ -253,19 +253,6 @@ const AddFamily = () => {
             required
           />
           <label>Head of Family</label>
-        </div>
-
-
-
-        {/* MEMBER COUNT */}
-        <div className="input-group">
-          <input
-            type="number"
-            name="count"
-            value={form.count}
-            onChange={handleChange}
-          />
-          <label>Member Count</label>
         </div>
 
 

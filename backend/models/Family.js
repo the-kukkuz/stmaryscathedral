@@ -49,6 +49,11 @@ const familySchema = new mongoose.Schema({
   subscription: {
     type: Boolean,
     default: false
+  },
+
+  subscription_amount: {
+    type: Number,
+    default: null
   }
 
 }, {

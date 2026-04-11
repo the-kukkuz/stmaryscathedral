@@ -292,12 +292,40 @@ const EditMember = () => {
             <label>Gender</label>
           </div>
           <div className="input-group">
-            <input
-              type="text"
+            <select
               name="relation"
               value={formData.relation}
               onChange={handleChange}
-            />
+            >
+              <option value=""></option>
+              <optgroup label="Core Family">
+                <option value="Son">Son</option>
+                <option value="Daughter">Daughter</option>
+                <option value="Wife">Wife</option>
+                <option value="Husband">Husband</option>
+                <option value="Father">Father</option>
+                <option value="Mother">Mother</option>
+              </optgroup>
+              <optgroup label="Extended Family">
+                <option value="Grandfather">Grandfather</option>
+                <option value="Grandmother">Grandmother</option>
+                <option value="Grandson">Grandson</option>
+                <option value="Granddaughter">Granddaughter</option>
+                <option value="Brother">Brother</option>
+                <option value="Sister">Sister</option>
+                <option value="Uncle">Uncle</option>
+                <option value="Aunt">Aunt</option>
+                <option value="Nephew">Nephew</option>
+                <option value="Niece">Niece</option>
+                <option value="Cousin">Cousin</option>
+                <option value="Daughter-in-Law">Daughter-in-Law</option>
+                <option value="Son-in-Law">Son-in-Law</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="Guardian">Guardian</option>
+                <option value="Other">Other</option>
+              </optgroup>
+            </select>
             <label>Relation</label>
           </div>
         </div>

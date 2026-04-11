@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import Subscription from "../models/Subscription.js";
+import Family from "../models/Family.js";
 
 const router = express.Router();
 
@@ -167,14 +168,64 @@ router.get("/reports/dues", async (req, res) => {
   }
 });
 
-// Get Subscription by Family Number
+// Get Subscription by Family Number — includes virtual unpaid records
 router.get("/family/:family_number", async (req, res) => {
   try {
-    const subscriptions = await Subscription.find({
-      family_number: req.params.family_number
-    }).sort({ year: -1 });
+    const familyNumber = req.params.family_number;
 
-    res.json(subscriptions);
+    // Fetch real subscription records
+    const realSubscriptions = await Subscription.find({
+      family_number: familyNumber
+    }).lean();
+
+    // Fetch the family to get the current subscription rate
+    const family = await Family.findOne({ family_number: familyNumber }).lean();
+    if (!family) {
+      return res.status(404).json({ error: "Family not found" });
+    }
+
+    const currentYear = new Date().getFullYear();
+    const subscriptionRate = family.subscription_amount || 0;
+
+    // If no real records exist, return empty (no range to generate)
+    // unless the family has a subscription_amount set
+    if (realSubscriptions.length === 0 && !family.subscription_amount) {
+      return res.json({ records: [], family });
+    }
+
+    // Determine year range: from earliest real record to current year
+    const realYears = realSubscriptions.map(s => s.year);
+    const startYear = realYears.length > 0
+      ? Math.min(...realYears)
+      : currentYear;
+
+    // Build a set of years that have real records
+    const realYearSet = new Set(realYears);
+
+    // Generate virtual unpaid records for missing years
+    const virtualRecords = [];
+    for (let yr = startYear; yr <= currentYear; yr++) {
+      if (!realYearSet.has(yr)) {
+        virtualRecords.push({
+          family_number: familyNumber,
+          family_name: family.name,
+          hof: family.hof,
+          year: yr,
+          amount: subscriptionRate,
+          paid: false,
+          virtual: true
+        });
+      }
+    }
+
+    // Mark real records as non-virtual
+    const taggedReal = realSubscriptions.map(s => ({ ...s, virtual: false }));
+
+    // Merge and sort by year descending
+    const allRecords = [...taggedReal, ...virtualRecords]
+      .sort((a, b) => b.year - a.year);
+
+    res.json({ records: allRecords, family });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -189,6 +240,121 @@ router.get("/year/:year", async (req, res) => {
 
     res.json(subscriptions);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ➕ POST - Bulk Pay multiple years (with optional extra_amount)
+router.post("/bulk-pay", async (req, res) => {
+  try {
+    const {
+      family_number,
+      years,
+      amount_per_year,
+      extra_amount,
+      paid_date,
+      payment_method,
+      receipt_number,
+      notes
+    } = req.body;
+
+    // Validate required fields
+    if (!family_number || !years || !Array.isArray(years) || years.length === 0 || !amount_per_year) {
+      return res.status(400).json({
+        error: "family_number, years (array), and amount_per_year are required"
+      });
+    }
+
+    const amount = Number(amount_per_year);
+    if (isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ error: "amount_per_year must be a positive number" });
+    }
+
+    const extra = Number(extra_amount) || 0;
+
+    // Fetch the family
+    const family = await Family.findOne({ family_number }).lean();
+    if (!family) {
+      return res.status(404).json({ error: "Family not found" });
+    }
+
+    // Validate amount >= family.subscription_amount (business rule)
+    if (family.subscription_amount && amount < family.subscription_amount) {
+      return res.status(400).json({
+        error: `Amount (${amount}) cannot be less than the family's current subscription rate (${family.subscription_amount}). Use the 'Change Subscription Amount' feature to decrease the rate.`
+      });
+    }
+
+    const created = [];
+    const failed = [];
+
+    // Sort years ascending so last_year is the highest
+    const sortedYears = [...years].sort((a, b) => a - b);
+    const lastYear = sortedYears[sortedYears.length - 1];
+    let extra_applied_to_year = extra > 0 ? lastYear : null;
+
+    for (const year of sortedYears) {
+      try {
+        // Determine amount for this year: last year gets extra on top
+        const yearAmount = (year === lastYear) ? amount + extra : amount;
+
+        // Check if a paid subscription already exists for this year
+        const existing = await Subscription.findOne({ family_number, year });
+
+        if (existing && existing.paid) {
+          failed.push({ year, reason: "Already paid" });
+          continue;
+        }
+
+        if (existing && !existing.paid) {
+          // Update existing unpaid record to paid
+          existing.amount = yearAmount;
+          existing.paid = true;
+          existing.paid_date = paid_date || new Date();
+          existing.payment_method = payment_method || "Cash";
+          existing.receipt_number = receipt_number || "";
+          existing.notes = notes || "";
+          await existing.save();
+          created.push(existing.toObject());
+        } else {
+          // Create new subscription record
+          const subscription = new Subscription({
+            family_number,
+            family_name: family.name,
+            hof: family.hof,
+            year,
+            amount: yearAmount,
+            paid: true,
+            paid_date: paid_date || new Date(),
+            payment_method: payment_method || "Cash",
+            receipt_number: receipt_number || "",
+            notes: notes || ""
+          });
+          await subscription.save();
+          created.push(subscription.toObject());
+        }
+      } catch (yearErr) {
+        failed.push({ year, reason: yearErr.message });
+      }
+    }
+
+    // Update family subscription_amount to the highest amount paid
+    const highestAmount = amount + extra; // last year's amount is always the highest
+    if (!family.subscription_amount || highestAmount > family.subscription_amount) {
+      await Family.findOneAndUpdate(
+        { family_number },
+        { subscription_amount: highestAmount }
+      );
+    }
+
+    res.json({
+      success: true,
+      created,
+      extra_applied_to_year,
+      failed
+    });
+  } catch (err) {
+    console.error("Error in bulk-pay:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -211,25 +377,45 @@ router.post("/", async (req, res) => {
       year
     });
 
-    if (existingSubscription) {
+    if (existingSubscription && existingSubscription.paid) {
       return res.status(409).json({
         error: `Subscription for year ${year} already exists for this family`
       });
     }
 
-    // Get last subscription to check if amount is decreasing
-    const lastSubscription = await Subscription.findOne({ family_number })
-      .sort({ year: -1 });
+    // If an unpaid record exists, update it to paid
+    if (existingSubscription && !existingSubscription.paid) {
+      existingSubscription.amount = amount;
+      existingSubscription.paid = true;
+      existingSubscription.paid_date = req.body.paid_date || new Date();
+      existingSubscription.payment_method = req.body.payment_method || "Cash";
+      existingSubscription.receipt_number = req.body.receipt_number || "";
+      existingSubscription.notes = req.body.notes || "";
+      await existingSubscription.save();
 
-    if (lastSubscription && amount < lastSubscription.amount) {
-      return res.status(400).json({
-        error: `Amount cannot be decreased. Minimum amount: ₹${lastSubscription.amount}`
+      // Set family subscription_amount if not set yet (first payment)
+      const family = await Family.findOne({ family_number });
+      if (family && !family.subscription_amount) {
+        family.subscription_amount = amount;
+        await family.save();
+      }
+
+      return res.status(200).json({
+        message: "Subscription updated to paid",
+        subscription: existingSubscription
       });
     }
 
     // Create new subscription
     const subscription = new Subscription(req.body);
     await subscription.save();
+
+    // Set family subscription_amount if not set yet (first payment)
+    const family = await Family.findOne({ family_number });
+    if (family && !family.subscription_amount) {
+      family.subscription_amount = amount;
+      await family.save();
+    }
 
     res.status(201).json({
       message: "Subscription added successfully",
@@ -283,20 +469,13 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Update Subscription
+// Update Subscription (admin action — no amount-decrease restriction)
 router.put("/:id", async (req, res) => {
   try {
     const subscription = await Subscription.findById(req.params.id);
 
     if (!subscription) {
       return res.status(404).json({ error: "Subscription not found" });
-    }
-
-    // If amount is being changed, check it's not decreased
-    if (req.body.amount && req.body.amount < subscription.amount) {
-      return res.status(400).json({
-        error: "Amount cannot be decreased"
-      });
     }
 
     const updatedSubscription = await Subscription.findByIdAndUpdate(
@@ -311,7 +490,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// Delete Subscription
+// Delete Subscription — clears Family.subscription_amount if last record is deleted
 router.delete("/:id", async (req, res) => {
   try {
     const subscription = await Subscription.findByIdAndDelete(req.params.id);
@@ -320,7 +499,24 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ error: "Subscription not found" });
     }
 
-    res.json({ message: "Subscription deleted successfully" });
+    // Check if this was the last subscription for the family
+    let subscription_amount_cleared = false;
+    const remaining = await Subscription.countDocuments({
+      family_number: subscription.family_number
+    });
+
+    if (remaining === 0) {
+      await Family.findOneAndUpdate(
+        { family_number: subscription.family_number },
+        { subscription_amount: null }
+      );
+      subscription_amount_cleared = true;
+    }
+
+    res.json({
+      message: "Subscription deleted successfully",
+      subscription_amount_cleared
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

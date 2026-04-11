@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../../css/existingfamadd.css";
 
 const ExistingFamilymem = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [familyInfo, setFamilyInfo] = useState({
     name: "",
     hof: "",
   });
+
+  const [memberCount, setMemberCount] = useState(0);
+  const [isCompletionMode, setIsCompletionMode] = useState(false);
 
   const [formData, setFormData] = useState({
     firstname: "",
@@ -34,6 +38,12 @@ const ExistingFamilymem = () => {
         family_number: location.state.family_number,
       }));
       fetchFamilyDetails(location.state.family_number);
+      
+      // Check if coming from Add Family (new family mode)
+      if (location.state?.isNewFamily) {
+        setIsCompletionMode(true);
+        fetchMemberCount(location.state.family_number);
+      }
     }
   }, [location.state]);
 
@@ -54,6 +64,55 @@ const ExistingFamilymem = () => {
     } catch (err) {
       console.error("Error fetching family details:", err.message);
       setFamilyInfo({ name: "", hof: "" });
+    }
+  };
+
+  // Fetch member count for the family
+  const fetchMemberCount = async (familyNumber) => {
+    try {
+      if (!familyNumber) return;
+      const API = import.meta.env.VITE_API_URL;
+      const res = await fetch(
+        `${API}/api/members?family_number=${familyNumber}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch members");
+      const data = await res.json();
+      setMemberCount(data.length);
+    } catch (err) {
+      console.error("Error fetching member count:", err.message);
+      setMemberCount(0);
+    }
+  };
+
+  // Handle completion of family member addition
+  const handleCompleteAddition = async () => {
+    try {
+      if (memberCount === 0) {
+        alert("⚠️ Please add at least 1 member before completing");
+        return;
+      }
+
+      const API = import.meta.env.VITE_API_URL;
+      const res = await fetch(
+        `${API}/api/families/update-count/${formData.family_number}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ count: memberCount }),
+        }
+      );
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Failed to update member count");
+      }
+
+      alert(`✅ Family member count updated successfully! Total members: ${memberCount}`);
+      
+      // Navigate to Family Details page
+      navigate(`/FamilyDetails/${formData.family_number}`);
+    } catch (err) {
+      alert(`❌ Error: ${err.message}`);
     }
   };
 
@@ -106,6 +165,12 @@ const ExistingFamilymem = () => {
       }
 
       alert("✅ Member added successfully!");
+      
+      // Refresh member count if in completion mode
+      if (isCompletionMode) {
+        fetchMemberCount(formData.family_number);
+      }
+      
       setFormData({
         firstname: "",
         lastname: "",
@@ -197,12 +262,40 @@ const ExistingFamilymem = () => {
             <label>Gender</label>
           </div>
           <div className="input-group">
-            <input
-              type="text"
+            <select
               name="relation"
               value={formData.relation}
               onChange={handleChange}
-            />
+            >
+              <option value=""></option>
+              <optgroup label="Core Family">
+                <option value="Son">Son</option>
+                <option value="Daughter">Daughter</option>
+                <option value="Wife">Wife</option>
+                <option value="Husband">Husband</option>
+                <option value="Father">Father</option>
+                <option value="Mother">Mother</option>
+              </optgroup>
+              <optgroup label="Extended Family">
+                <option value="Grandfather">Grandfather</option>
+                <option value="Grandmother">Grandmother</option>
+                <option value="Grandson">Grandson</option>
+                <option value="Granddaughter">Granddaughter</option>
+                <option value="Brother">Brother</option>
+                <option value="Sister">Sister</option>
+                <option value="Uncle">Uncle</option>
+                <option value="Aunt">Aunt</option>
+                <option value="Nephew">Nephew</option>
+                <option value="Niece">Niece</option>
+                <option value="Cousin">Cousin</option>
+                <option value="Daughter-in-Law">Daughter-in-Law</option>
+                <option value="Son-in-Law">Son-in-Law</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="Guardian">Guardian</option>
+                <option value="Other">Other</option>
+              </optgroup>
+            </select>
             <label>Relation</label>
           </div>
         </div>
@@ -315,6 +408,23 @@ const ExistingFamilymem = () => {
         <button type="submit" className="submit-btn">
           Add Member
         </button>
+
+        {/* Completion Section - Only show when coming from Add Family */}
+        {isCompletionMode && (
+          <div className="completion-section">
+            <div className="member-count-display">
+              <span className="count-label">Members Added:</span>
+              <span className="count-badge">{memberCount}</span>
+            </div>
+            <button
+              type="button"
+              className="complete-btn"
+              onClick={handleCompleteAddition}
+            >
+              Finish
+            </button>
+          </div>
+        )}
       </form>
     </div>
   );

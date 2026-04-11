@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "../../css/deathadd.css";
 import { generateDeathCertificatePdf } from "../../utils/pdfExport";
+import { buildAddress, inferParentSpouseNames } from "../../utils/relationInference";
 
 const AddDeathRecord = () => {
   const [families, setFamilies] = useState([]);
@@ -113,30 +114,50 @@ const AddDeathRecord = () => {
 
   // Autofill when member selected
   useEffect(() => {
-    if (selectedMember) {
-      const memberObj = members.find((m) => m._id === selectedMember);
-      if (memberObj) {
-        setFormData((prev) => ({
-          ...prev,
-          name: memberObj.name || "",
-          house_name: memberObj.house_name || "",
-          address_place: memberObj.address || "",
-          father_husband_name:
-            memberObj.father_name || memberObj.husband_name || "",
-          mother_wife_name: memberObj.mother_name || memberObj.wife_name || "",
-          age: memberObj.age || "",
-          cell_no: memberObj.phone || "",
-        }));
+    if (selectedMember && selectedFamily) {
+      const API = import.meta.env.VITE_API_URL;
+      
+      // Fetch family data to get location, village, and hof name
+      fetch(`${API}/api/families/${selectedFamily.family_number}`)
+        .then((res) => res.json())
+        .then((family) => {
+          const memberObj = members.find((m) => m._id === selectedMember);
+          
+          if (memberObj) {
+            // Build address from family location + village
+            const address = buildAddress(family);
+            
+            // Infer parent/spouse names from family structure
+            const { fatherName, motherName, spouseName } = inferParentSpouseNames(
+              memberObj,
+              members,
+              family.hof
+            );
+            
+            setFormData((prev) => ({
+              ...prev,
+              name: memberObj.name || "",
+              house_name: family.name || "",
+              address_place: address,
+              block: family.ward_number || "",
+              unit: family.family_unit || "",
+              father_husband_name: fatherName || spouseName || "",
+              mother_wife_name: motherName || "",
+              age: memberObj.age || "",
+              cell_no: memberObj.phone || "",
+            }));
 
-        if (memberObj.hof) {
-          setIsHof(true);
-        } else {
-          setIsHof(false);
-          setNextHof("");
-        }
-      }
+            if (memberObj.hof) {
+              setIsHof(true);
+            } else {
+              setIsHof(false);
+              setNextHof("");
+            }
+          }
+        })
+        .catch((err) => console.error("Error fetching family data:", err));
     }
-  }, [selectedMember, members]);
+  }, [selectedMember, selectedFamily, members]);
 
   // Handle form input
   const handleChange = (e) => {
@@ -312,18 +333,13 @@ const AddDeathRecord = () => {
             {formData.block && (
               <div className="input-group">
                 <label>Unit</label>
-                <select
+                <input
+                  type="text"
                   name="unit"
                   value={formData.unit}
                   onChange={handleChange}
-                >
-                  <option value="">Select Unit</option>
-                  {blockUnits[formData.block].map((unitObj) => (
-                    <option key={unitObj.number} value={`${unitObj.number} - ${unitObj.name}`}>
-                      Unit {unitObj.number} - {unitObj.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Enter unit"
+                />
               </div>
             )}
           </>

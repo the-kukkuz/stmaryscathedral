@@ -1,5 +1,6 @@
 import express from "express";
 import Family from "../models/Family.js";
+import Subscription from "../models/Subscription.js";
 
 const router = express.Router();
 
@@ -142,6 +143,62 @@ router.get("/number/:family_number", async (req, res) => {
 
 
 
+// ✅ UPDATE FAMILY SUBSCRIPTION AMOUNT (admin override)
+router.put("/:id/subscription-amount", async (req, res) => {
+
+  try {
+
+    const { subscription_amount } = req.body;
+
+    if (subscription_amount === undefined || subscription_amount === null) {
+      return res.status(400).json({
+        error: "subscription_amount is required"
+      });
+    }
+
+    const amount = Number(subscription_amount);
+    if (isNaN(amount) || amount < 0) {
+      return res.status(400).json({
+        error: "subscription_amount must be a non-negative number"
+      });
+    }
+
+    const family = await Family.findByIdAndUpdate(
+      req.params.id,
+      { subscription_amount: amount },
+      { new: true, runValidators: true }
+    );
+
+    if (!family) {
+      return res.status(404).json({
+        error: "Family not found"
+      });
+    }
+
+    // Also update all existing unpaid subscription records for this family
+    const updateResult = await Subscription.updateMany(
+      { family_number: family.family_number, paid: false },
+      { $set: { amount: amount } }
+    );
+
+    res.json({
+      message: "Subscription amount updated successfully",
+      family,
+      unpaid_records_updated: updateResult.modifiedCount
+    });
+
+  } catch (err) {
+
+    res.status(400).json({
+      error: err.message
+    });
+
+  }
+
+});
+
+
+
 // ✅ GET FAMILY BY ID
 router.get("/:id", async (req, res) => {
 
@@ -234,6 +291,53 @@ router.delete("/:id", async (req, res) => {
   } catch (err) {
 
     res.status(500).json({
+      error: err.message
+    });
+
+  }
+
+});
+
+
+
+// ✅ UPDATE FAMILY MEMBER COUNT
+router.put("/update-count/:family_number", async (req, res) => {
+
+  try {
+
+    const { count } = req.body;
+
+    if (count === undefined || count === null) {
+      return res.status(400).json({
+        error: "Member count is required"
+      });
+    }
+
+    const updated = await Family.findOneAndUpdate(
+      { family_number: req.params.family_number },
+      { count: count },
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!updated) {
+
+      return res.status(404).json({
+        error: "Family not found"
+      });
+
+    }
+
+    res.json({
+      message: "Family member count updated successfully",
+      family: updated
+    });
+
+  } catch (err) {
+
+    res.status(400).json({
       error: err.message
     });
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import "../../css/addmarriage.css";
 import { generateMarriageCertificatePdf } from '../../utils/pdfExport';
+import { buildAddress, inferParentSpouseNames } from '../../utils/relationInference';
 
 const AddMarriage = () => {
   const [groomSearch, setGroomSearch] = useState("");
@@ -27,6 +28,12 @@ const AddMarriage = () => {
   const [manualBrideFatherName, setManualBrideFatherName] = useState("");
   const [manualGroomMotherName, setManualGroomMotherName] = useState("");
   const [manualBrideMotherName, setManualBrideMotherName] = useState("");
+
+  // State to store fetched family data for auto-filling
+  const [groomFamilyData, setGroomFamilyData] = useState(null);
+  const [groomFamilyMembers, setGroomFamilyMembers] = useState([]);
+  const [brideFamilyData, setBrideFamilyData] = useState(null);
+  const [brideFamilyMembers, setBrideFamilyMembers] = useState([]);
 
 
   const [marriageData, setMarriageData] = useState({
@@ -77,6 +84,102 @@ const AddMarriage = () => {
       setFilteredBrides(females.slice(0, 10)); // Limit to 10 results
     }
   }, [brideSearch, allMembers]);
+
+  // Auto-fill groom data when parishioner groom is selected
+  useEffect(() => {
+    if (selectedGroom && isGroomParishioner) {
+      const API = import.meta.env.VITE_API_URL;
+      
+      // Fetch groom's family data
+      fetch(`${API}/api/families/${selectedGroom.family_number}`)
+        .then((res) => res.json())
+        .then((family) => {
+          setGroomFamilyData(family);
+          
+          // Fetch all family members
+          return fetch(`${API}/api/members?family_number=${selectedGroom.family_number}`);
+        })
+        .then((res) => res.json())
+        .then((members) => {
+          setGroomFamilyMembers(members);
+          
+          // Build address and infer parent names
+          const address = buildAddress(groomFamilyData || {});
+          const { fatherName, motherName } = inferParentSpouseNames(
+            selectedGroom,
+            members,
+            groomFamilyData?.hof || ''
+          );
+          
+          // Auto-fill groom fields with editable data
+          setManualGroomName(selectedGroom.name || "");
+          setManualGroomAddress(address);
+          setManualGroomCityDistrict(groomFamilyData?.village || "");
+          setManualGroomStateCountry("Kerala, India");
+          setManualGroomFatherName(fatherName);
+          setManualGroomMotherName(motherName);
+          setManualGroomHomeParish("St Mary's Jacobite Syrian Cathedral, Pallikara");
+        })
+        .catch((err) => console.error("Error fetching groom family data:", err));
+    } else if (!isGroomParishioner) {
+      // Clear auto-filled data when switching to non-parishioner
+      setManualGroomName("");
+      setManualGroomAddress("");
+      setManualGroomCityDistrict("");
+      setManualGroomStateCountry("");
+      setManualGroomFatherName("");
+      setManualGroomMotherName("");
+      setManualGroomHomeParish("");
+    }
+  }, [selectedGroom, isGroomParishioner]);
+
+  // Auto-fill bride data when parishioner bride is selected
+  useEffect(() => {
+    if (selectedBride && isBrideParishioner) {
+      const API = import.meta.env.VITE_API_URL;
+      
+      // Fetch bride's family data
+      fetch(`${API}/api/families/${selectedBride.family_number}`)
+        .then((res) => res.json())
+        .then((family) => {
+          setBrideFamilyData(family);
+          
+          // Fetch all family members
+          return fetch(`${API}/api/members?family_number=${selectedBride.family_number}`);
+        })
+        .then((res) => res.json())
+        .then((members) => {
+          setBrideFamilyMembers(members);
+          
+          // Build address and infer parent names
+          const address = buildAddress(brideFamilyData || {});
+          const { fatherName, motherName } = inferParentSpouseNames(
+            selectedBride,
+            members,
+            brideFamilyData?.hof || ''
+          );
+          
+          // Auto-fill bride fields with editable data
+          setManualBrideName(selectedBride.name || "");
+          setManualBrideAddress(address);
+          setManualBrideCityDistrict(brideFamilyData?.village || "");
+          setManualBrideStateCountry("Kerala, India");
+          setManualBrideFatherName(fatherName);
+          setManualBrideMotherName(motherName);
+          setManualBrideHomeParish("St Mary's Jacobite Syrian Cathedral, Pallikara");
+        })
+        .catch((err) => console.error("Error fetching bride family data:", err));
+    } else if (!isBrideParishioner) {
+      // Clear auto-filled data when switching to non-parishioner
+      setManualBrideName("");
+      setManualBrideAddress("");
+      setManualBrideCityDistrict("");
+      setManualBrideStateCountry("");
+      setManualBrideFatherName("");
+      setManualBrideMotherName("");
+      setManualBrideHomeParish("");
+    }
+  }, [selectedBride, isBrideParishioner]);
 
   // Handle marriage form input
   const handleMarriageDataChange = (e) => {
@@ -160,22 +263,22 @@ const AddMarriage = () => {
       spouse1_id: isGroomParishioner ? selectedGroom?._id : null,
       spouse1_name: isGroomParishioner ? selectedGroom?.name : manualGroomName,
       spouse1_isParishioner: isGroomParishioner,
-      spouse1_address: isGroomParishioner ? null : manualGroomAddress,
-      spouse1_city_district: isGroomParishioner ? null : manualGroomCityDistrict,
-      spouse1_state_country: isGroomParishioner ? null : manualGroomStateCountry,
-      spouse1_father_name: isGroomParishioner ? null : manualGroomFatherName,
-      spouse1_mother_name: isGroomParishioner ? null : manualGroomMotherName,
-      spouse1_home_parish: isGroomParishioner ? null : manualGroomHomeParish,
+      spouse1_address: manualGroomAddress || null,
+      spouse1_city_district: manualGroomCityDistrict || null,
+      spouse1_state_country: manualGroomStateCountry || null,
+      spouse1_father_name: manualGroomFatherName || null,
+      spouse1_mother_name: manualGroomMotherName || null,
+      spouse1_home_parish: manualGroomHomeParish || null,
 
       spouse2_id: isBrideParishioner ? selectedBride?._id : null,
       spouse2_name: isBrideParishioner ? selectedBride?.name : manualBrideName,
       spouse2_isParishioner: isBrideParishioner,
-      spouse2_address: isBrideParishioner ? null : manualBrideAddress,
-      spouse2_city_district: isBrideParishioner ? null : manualBrideCityDistrict,
-      spouse2_state_country: isBrideParishioner ? null : manualBrideStateCountry,
-      spouse2_father_name: isBrideParishioner ? null : manualBrideFatherName,
-      spouse2_mother_name: isBrideParishioner ? null : manualBrideMotherName,
-      spouse2_home_parish: isBrideParishioner ? null : manualBrideHomeParish,
+      spouse2_address: manualBrideAddress || null,
+      spouse2_city_district: manualBrideCityDistrict || null,
+      spouse2_state_country: manualBrideStateCountry || null,
+      spouse2_father_name: manualBrideFatherName || null,
+      spouse2_mother_name: manualBrideMotherName || null,
+      spouse2_home_parish: manualBrideHomeParish || null,
 
       date: marriageData.date,
       place: marriageData.place,
@@ -520,6 +623,61 @@ const AddMarriage = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Show editable auto-filled fields when bride is selected */}
+              {selectedBride && (
+                <div className="marriage-input-group-manual" style={{ marginTop: '20px' }}>
+                  <input
+                    type="text"
+                    placeholder="BRIDE NAME *"
+                    value={manualBrideName}
+                    onChange={(e) => setManualBrideName(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="ADDRESS"
+                    value={manualBrideAddress}
+                    onChange={(e) => setManualBrideAddress(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="CITY & DISTRICT"
+                    value={manualBrideCityDistrict}
+                    onChange={(e) => setManualBrideCityDistrict(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="STATE & COUNTRY"
+                    value={manualBrideStateCountry}
+                    onChange={(e) => setManualBrideStateCountry(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="FATHER'S NAME"
+                    value={manualBrideFatherName}
+                    onChange={(e) => setManualBrideFatherName(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="MOTHER'S NAME"
+                    value={manualBrideMotherName}
+                    onChange={(e) => setManualBrideMotherName(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="NAME OF PARISH"
+                    value={manualBrideHomeParish}
+                    onChange={(e) => setManualBrideHomeParish(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                </div>
+              )}
             </>
           ) : (
             <div className="marriage-input-group-manual">
@@ -643,8 +801,63 @@ const AddMarriage = () => {
             Register Marriage
           </button>
         </form>
-      </div>
-    </>
+              </div>
+
+              {/* Show editable auto-filled fields when groom is selected */}
+              {selectedGroom && (
+                <div className="marriage-input-group-manual" style={{ marginTop: '20px' }}>
+                  <input
+                    type="text"
+                    placeholder="GROOM NAME *"
+                    value={manualGroomName}
+                    onChange={(e) => setManualGroomName(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="ADDRESS"
+                    value={manualGroomAddress}
+                    onChange={(e) => setManualGroomAddress(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="CITY & DISTRICT"
+                    value={manualGroomCityDistrict}
+                    onChange={(e) => setManualGroomCityDistrict(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="STATE & COUNTRY"
+                    value={manualGroomStateCountry}
+                    onChange={(e) => setManualGroomStateCountry(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="FATHER'S NAME"
+                    value={manualGroomFatherName}
+                    onChange={(e) => setManualGroomFatherName(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="MOTHER'S NAME"
+                    value={manualGroomMotherName}
+                    onChange={(e) => setManualGroomMotherName(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                  <input
+                    type="text"
+                    placeholder="NAME OF PARISH"
+                    value={manualGroomHomeParish}
+                    onChange={(e) => setManualGroomHomeParish(e.target.value)}
+                    className="marriage-input-field"
+                  />
+                </div>
+              )}
+            </>
   );
 };
 
