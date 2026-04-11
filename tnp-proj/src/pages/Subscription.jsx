@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import "../css/subscription.css";
-
-const API = import.meta.env.VITE_API_URL;
+import { api } from "../api";
 
 const Subscription = () => {
   // ─── Family search state ───
@@ -74,9 +73,8 @@ const Subscription = () => {
 
   // Fetch all families on mount
   useEffect(() => {
-    fetch(`${API}/api/families`)
-      .then((res) => res.json())
-      .then((data) => setFamilies(data))
+    api.get("/families")
+      .then(({ data }) => setFamilies(data))
       .catch((err) => console.error("Error fetching families:", err));
   }, []);
 
@@ -98,10 +96,8 @@ const Subscription = () => {
   const fetchSubscriptionData = useCallback(async (familyNumber) => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/api/subscriptions/family/${familyNumber}`);
-      const data = await res.json();
+      const { data } = await api.get(`/subscriptions/family/${familyNumber}`);
 
-      if (res.ok) {
         setSubscriptionRecords(data.records || []);
         setFamilyData(data.family || null);
 
@@ -126,12 +122,10 @@ const Subscription = () => {
           .filter(r => !r.paid)
           .map(r => r.year);
         setMultiSelectedYears(unpaidYears);
-      } else {
-        setSubscriptionRecords([]);
-        setFamilyData(null);
-      }
     } catch (err) {
       console.error("Error fetching subscription data:", err);
+      setSubscriptionRecords([]);
+      setFamilyData(null);
     } finally {
       setLoading(false);
     }
@@ -174,14 +168,10 @@ const Subscription = () => {
 
     try {
       setChangingRate(true);
-      const res = await fetch(`${API}/api/families/${selectedFamily._id}/subscription-amount`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription_amount: amount })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update");
+      const { data } = await api.put(
+        `/families/${selectedFamily._id}/subscription-amount`,
+        { subscription_amount: amount }
+      );
 
       alert(`✅ Subscription rate updated to ₹${amount}\n${data.unpaid_records_updated || 0} unpaid record(s) updated.`);
 
@@ -232,14 +222,7 @@ const Subscription = () => {
         notes: editForm.notes
       };
 
-      const res = await fetch(`${API}/api/subscriptions/${editingRecord._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save");
+      await api.put(`/subscriptions/${editingRecord._id}`, payload);
 
       setEditingRecord(null);
       fetchSubscriptionData(selectedFamily.family_number);
@@ -259,11 +242,7 @@ const Subscription = () => {
     }
 
     try {
-      const res = await fetch(`${API}/api/subscriptions/${record._id}`, {
-        method: "DELETE"
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to delete");
+      const { data } = await api.delete(`/subscriptions/${record._id}`);
 
       if (data.subscription_amount_cleared) {
         alert(`✅ Subscription for ${record.year} deleted.\n\nℹ️ No subscriptions remain. Subscription rate has been cleared.`);
@@ -321,14 +300,7 @@ const Subscription = () => {
         notes: inlinePayForm.notes
       };
 
-      const res = await fetch(`${API}/api/subscriptions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create subscription");
+      await api.post("/subscriptions", payload);
 
       setPayingYear(null);
       fetchSubscriptionData(selectedFamily.family_number);
@@ -367,14 +339,7 @@ const Subscription = () => {
         notes: singleForm.notes
       };
 
-      const res = await fetch(`${API}/api/subscriptions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to add subscription");
+      await api.post("/subscriptions", payload);
 
       setShowAddPayment(false);
       fetchSubscriptionData(selectedFamily.family_number);
@@ -432,23 +397,16 @@ const Subscription = () => {
 
     try {
       setMultiPaying(true);
-      const res = await fetch(`${API}/api/subscriptions/bulk-pay`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          family_number: selectedFamily.family_number,
-          years: multiSelectedYears,
-          amount_per_year: amount,
-          extra_amount: extra,
-          paid_date: multiForm.paid_date || new Date().toISOString(),
-          payment_method: multiForm.payment_method,
-          receipt_number: multiForm.receipt_number,
-          notes: multiForm.notes
-        })
+      const { data } = await api.post("/subscriptions/bulk-pay", {
+        family_number: selectedFamily.family_number,
+        years: multiSelectedYears,
+        amount_per_year: amount,
+        extra_amount: extra,
+        paid_date: multiForm.paid_date || new Date().toISOString(),
+        payment_method: multiForm.payment_method,
+        receipt_number: multiForm.receipt_number,
+        notes: multiForm.notes
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Multi-year payment failed");
 
       const createdCount = data.created?.length || 0;
       const failedCount = data.failed?.length || 0;

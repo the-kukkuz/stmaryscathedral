@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../../css/existingfamadd.css";
+import { api } from "../../api";
 
 const ExistingFamilymem = () => {
   const location = useLocation();
@@ -51,12 +52,7 @@ const ExistingFamilymem = () => {
   const fetchFamilyDetails = async (familyNumber) => {
     try {
       if (!familyNumber) return;
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(
-        `${API}/api/families/number/${familyNumber}`
-      );
-      if (!res.ok) throw new Error("Family not found");
-      const data = await res.json();
+      const { data } = await api.get(`/families/number/${familyNumber}`);
       setFamilyInfo({
         name: data.name || "",
         hof: data.hof || "",
@@ -71,12 +67,7 @@ const ExistingFamilymem = () => {
   const fetchMemberCount = async (familyNumber) => {
     try {
       if (!familyNumber) return;
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(
-        `${API}/api/members?family_number=${familyNumber}`
-      );
-      if (!res.ok) throw new Error("Failed to fetch members");
-      const data = await res.json();
+      const { data } = await api.get(`/members?family_number=${familyNumber}`);
       setMemberCount(data.length);
     } catch (err) {
       console.error("Error fetching member count:", err.message);
@@ -92,20 +83,9 @@ const ExistingFamilymem = () => {
         return;
       }
 
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(
-        `${API}/api/families/update-count/${formData.family_number}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ count: memberCount }),
-        }
-      );
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to update member count");
-      }
+      await api.put(`/families/update-count/${formData.family_number}`, {
+        count: memberCount,
+      });
 
       alert(`✅ Family member count updated successfully! Total members: ${memberCount}`);
       
@@ -152,17 +132,7 @@ const ExistingFamilymem = () => {
         baptism: formData.baptismStatus === "Yes",
       };
 
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to add member");
-      }
+      await api.post("/members", payload);
 
       alert("✅ Member added successfully!");
       

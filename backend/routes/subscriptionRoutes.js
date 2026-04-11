@@ -5,43 +5,6 @@ import Family from "../models/Family.js";
 
 const router = express.Router();
 
-// 🔍 DEBUG ROUTES - Must be first before any /:id routes
-
-// Debug endpoint to test model
-router.get("/debug", async (req, res) => {
-  try {
-    console.log("Debug endpoint hit");
-    const count = await Subscription.countDocuments();
-    const all = await Subscription.find();
-    console.log("Found", count, "subscriptions");
-    
-    res.json({
-      success: true,
-      count,
-      collectionName: Subscription.collection.name,
-      data: all
-    });
-  } catch (err) {
-    console.error("Debug error:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Raw data endpoint to see actual MongoDB data
-router.get("/raw-data", async (req, res) => {
-  try {
-    const db = mongoose.connection.db;
-    const rawData = await db.collection("subscriptions").find().limit(5).toArray();
-    
-    res.json({
-      count: await db.collection("subscriptions").countDocuments(),
-      sampleData: rawData
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // 📊 SPECIFIC ROUTES - Must come before /:id
 
 // Get Subscription Statistics
@@ -106,7 +69,8 @@ router.get("/stats/overview", async (req, res) => {
       pendingFamilies
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching subscription stats:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -164,7 +128,8 @@ router.get("/reports/dues", async (req, res) => {
     duesReport.sort((a, b) => b.dues - a.dues);
     res.json(duesReport);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching dues report:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -227,7 +192,8 @@ router.get("/family/:family_number", async (req, res) => {
 
     res.json({ records: allRecords, family });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching subscriptions by family:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -240,7 +206,8 @@ router.get("/year/:year", async (req, res) => {
 
     res.json(subscriptions);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching subscriptions by year:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -265,6 +232,25 @@ router.post("/bulk-pay", async (req, res) => {
       });
     }
 
+    const currentYear = new Date().getFullYear();
+    const normalizedYears = years.map((y) => Number(y));
+
+    const invalidYear = normalizedYears.some((y) =>
+      !Number.isInteger(y) || y < 1900 || y > currentYear + 1
+    );
+
+    if (invalidYear) {
+      return res.status(400).json({
+        error: `Each year must be an integer between 1900 and ${currentYear + 1}`
+      });
+    }
+
+    if (new Set(normalizedYears).size !== normalizedYears.length) {
+      return res.status(400).json({
+        error: "Duplicate years are not allowed"
+      });
+    }
+
     const amount = Number(amount_per_year);
     if (isNaN(amount) || amount <= 0) {
       return res.status(400).json({ error: "amount_per_year must be a positive number" });
@@ -282,7 +268,7 @@ router.post("/bulk-pay", async (req, res) => {
     const failed = [];
 
     // Sort years ascending so last_year is the highest
-    const sortedYears = [...years].sort((a, b) => a - b);
+    const sortedYears = [...normalizedYears].sort((a, b) => a - b);
     const lastYear = sortedYears[sortedYears.length - 1];
     const extra_applied_to_year = lastYear;
 
@@ -351,7 +337,7 @@ router.post("/bulk-pay", async (req, res) => {
     });
   } catch (err) {
     console.error("Error in bulk-pay:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -403,7 +389,20 @@ router.post("/", async (req, res) => {
     }
 
     // Create new subscription
-    const subscription = new Subscription(req.body);
+    const createPayload = {
+      family_number: req.body.family_number,
+      family_name: req.body.family_name,
+      hof: req.body.hof,
+      year,
+      amount,
+      paid: req.body.paid === undefined ? true : req.body.paid,
+      paid_date: req.body.paid_date,
+      receipt_number: req.body.receipt_number,
+      payment_method: req.body.payment_method,
+      notes: req.body.notes
+    };
+
+    const subscription = new Subscription(createPayload);
     await subscription.save();
 
     // Set family subscription_amount if not set yet (first payment)
@@ -444,7 +443,8 @@ router.get("/", async (req, res) => {
 
     res.json(subscriptions);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching subscriptions:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -453,6 +453,10 @@ router.get("/", async (req, res) => {
 // Get One Subscription
 router.get("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
     const subscription = await Subscription.findById(req.params.id);
 
     if (!subscription) {
@@ -461,27 +465,50 @@ router.get("/:id", async (req, res) => {
 
     res.json(subscription);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching subscription by id:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
 // Update Subscription (admin action — no amount-decrease restriction)
 router.put("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
     const subscription = await Subscription.findById(req.params.id);
 
     if (!subscription) {
       return res.status(404).json({ error: "Subscription not found" });
     }
 
+    const allowedUpdate = {
+      family_number: req.body.family_number,
+      family_name: req.body.family_name,
+      hof: req.body.hof,
+      year: req.body.year,
+      amount: req.body.amount,
+      paid: req.body.paid,
+      paid_date: req.body.paid_date,
+      receipt_number: req.body.receipt_number,
+      payment_method: req.body.payment_method,
+      notes: req.body.notes
+    };
+
+    const cleanUpdate = Object.fromEntries(
+      Object.entries(allowedUpdate).filter(([, value]) => value !== undefined)
+    );
+
     const updatedSubscription = await Subscription.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      cleanUpdate,
       { new: true, runValidators: true }
     );
 
     res.json(updatedSubscription);
   } catch (err) {
+    console.error("Error updating subscription:", err);
     res.status(400).json({ error: err.message });
   }
 });
@@ -489,6 +516,10 @@ router.put("/:id", async (req, res) => {
 // Delete Subscription — clears Family.subscription_amount if last record is deleted
 router.delete("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
     const subscription = await Subscription.findByIdAndDelete(req.params.id);
 
     if (!subscription) {
@@ -514,7 +545,8 @@ router.delete("/:id", async (req, res) => {
       subscription_amount_cleared
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error deleting subscription:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 

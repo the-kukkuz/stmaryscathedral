@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import "../../css/addmarriage.css";
 import { generateMarriageCertificatePdf } from '../../utils/pdfExport';
 import { buildAddress, inferParentSpouseNames } from '../../utils/relationInference';
+import { api } from '../../api';
 
 const AddMarriage = () => {
   const [groomSearch, setGroomSearch] = useState("");
@@ -46,10 +47,8 @@ const AddMarriage = () => {
 
   // Fetch all members on component mount
   useEffect(() => {
-    const API = import.meta.env.VITE_API_URL;
-    fetch(`${API}/api/members`)
-      .then((res) => res.json())
-      .then((data) => {
+    api.get('/members')
+      .then(({ data }) => {
         // Filter out deceased members
         const activeMembers = data.filter(member => !member.deceased);
         setAllMembers(activeMembers);
@@ -88,21 +87,18 @@ const AddMarriage = () => {
   // Auto-fill groom data when parishioner groom is selected
   useEffect(() => {
     if (selectedGroom && isGroomParishioner) {
-      const API = import.meta.env.VITE_API_URL;
       let fetchedFamily = null;
       
       // Fetch groom's family data
-      fetch(`${API}/api/families/number/${selectedGroom.family_number}`)
-        .then((res) => res.json())
-        .then((family) => {
+      api.get(`/families/number/${selectedGroom.family_number}`)
+        .then(({ data: family }) => {
           fetchedFamily = family;
           setGroomFamilyData(family);
           
           // Fetch all family members
-          return fetch(`${API}/api/members?family_number=${selectedGroom.family_number}`);
+          return api.get(`/members?family_number=${selectedGroom.family_number}`);
         })
-        .then((res) => res.json())
-        .then((members) => {
+        .then(({ data: members }) => {
           setGroomFamilyMembers(members);
           
           // Build address and infer parent names
@@ -138,21 +134,18 @@ const AddMarriage = () => {
   // Auto-fill bride data when parishioner bride is selected
   useEffect(() => {
     if (selectedBride && isBrideParishioner) {
-      const API = import.meta.env.VITE_API_URL;
       let fetchedFamily = null;
       
       // Fetch bride's family data
-      fetch(`${API}/api/families/number/${selectedBride.family_number}`)
-        .then((res) => res.json())
-        .then((family) => {
+      api.get(`/families/number/${selectedBride.family_number}`)
+        .then(({ data: family }) => {
           fetchedFamily = family;
           setBrideFamilyData(family);
           
           // Fetch all family members
-          return fetch(`${API}/api/members?family_number=${selectedBride.family_number}`);
+          return api.get(`/members?family_number=${selectedBride.family_number}`);
         })
-        .then((res) => res.json())
-        .then((members) => {
+        .then(({ data: members }) => {
           setBrideFamilyMembers(members);
           
           // Build address and infer parent names
@@ -292,21 +285,7 @@ const AddMarriage = () => {
 
 
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(
-        `${API}/api/marriages`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to add marriage record");
-      }
+      const { data } = await api.post('/marriages', payload);
 
       alert("✅ Marriage record added successfully!");
       setSavedRecord(data.marriage);

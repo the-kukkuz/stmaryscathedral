@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "../../css/deathadd.css";
 import { generateDeathCertificatePdf } from "../../utils/pdfExport";
 import { buildAddress, inferParentSpouseNames } from "../../utils/relationInference";
+import { api } from "../../api";
 
 const AddDeathRecord = () => {
   const [families, setFamilies] = useState([]);
@@ -78,10 +79,8 @@ const AddDeathRecord = () => {
 
   // Fetch families on mount
   useEffect(() => {
-    const API = import.meta.env.VITE_API_URL;
-    fetch(`${API}/api/families`)
-      .then((res) => res.json())
-      .then((data) => setFamilies(data))
+    api.get("/families")
+      .then(({ data }) => setFamilies(data))
       .catch((err) => console.error("Error fetching families:", err));
   }, []);
 
@@ -104,12 +103,8 @@ const AddDeathRecord = () => {
   // Fetch members when family selected
   useEffect(() => {
     if (selectedHof && selectedFamily) {
-      const API = import.meta.env.VITE_API_URL;
-      fetch(
-        `${API}/api/members?family_number=${selectedFamily.family_number}`
-      )
-        .then((res) => res.json())
-        .then((data) => setMembers(data))
+      api.get(`/members?family_number=${selectedFamily.family_number}`)
+        .then(({ data }) => setMembers(data))
         .catch((err) => console.error("Error fetching members:", err));
     }
   }, [selectedHof, selectedFamily]);
@@ -118,12 +113,9 @@ const AddDeathRecord = () => {
   // Autofill when member selected
   useEffect(() => {
     if (selectedMember && selectedFamily) {
-      const API = import.meta.env.VITE_API_URL;
-      
       // Fetch family data to get location, village, and hof name
-      fetch(`${API}/api/families/number/${selectedFamily.family_number}`)
-        .then((res) => res.json())
-        .then((family) => {
+      api.get(`/families/number/${selectedFamily.family_number}`)
+        .then(({ data: family }) => {
           const memberObj = members.find((m) => m._id === selectedMember);
           
           if (memberObj) {
@@ -233,18 +225,7 @@ const AddDeathRecord = () => {
     };
 
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/deaths`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json(); // ✅ Get response data for better error handling
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to add death record");
-      }
+      const { data } = await api.post("/deaths", payload);
 
       alert("✅ Death record added successfully!");
       setSavedRecord(data.death);

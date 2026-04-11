@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../../css/viewmembers.css";
 import { generateTablePdf, downloadCsv } from "../../utils/pdfExport";
+import { api } from "../../api";
 
 const SearchedFam = () => {
   const location = useLocation();
@@ -13,10 +14,8 @@ const SearchedFam = () => {
   useEffect(() => {
     if (!family_number) return;
 
-    const API = import.meta.env.VITE_API_URL;
-    fetch(`${API}/api/members?family_number=${family_number}`)
-      .then((res) => res.json())
-      .then((data) => setMembers(data))
+    api.get(`/members?family_number=${family_number}`)
+      .then(({ data }) => setMembers(data))
       .catch((err) => {
         console.error("Error fetching members:", err);
         setError("Could not load members");

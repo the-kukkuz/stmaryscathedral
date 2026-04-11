@@ -2,15 +2,19 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import authRoutes from "./routes/authRoutes.js";
 import memberRoutes from "./routes/memberRoutes.js";
 import familyRoutes from "./routes/familyRoutes.js";
 import marriageRoutes from "./routes/marriageRoutes.js";
 import baptismRoutes from "./routes/baptismRoutes.js";
 import deathRoutes from "./routes/deathRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+import authMiddleware from "./middleware/auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,9 +22,47 @@ const __dirname = path.dirname(__filename);
 // Ensure env loads regardless of where node is started from.
 dotenv.config({ path: path.join(__dirname, ".env") });
 
+const required = [
+  "MONGO_URI",
+  "JWT_SECRET",
+  "ADMIN_USERNAME",
+  "ADMIN_PASSWORD",
+  "ALLOWED_ORIGIN"
+];
+
+for (const key of required) {
+  if (!process.env[key]) {
+    throw new Error(`Missing required env var: ${key}`);
+  }
+}
+
 const app = express();
-app.use(cors());
+app.use(helmet());
+app.use(helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"],
+    imgSrc: ["'self'", "data:"]
+  }
+}));
+
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || "http://localhost:5173",
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 app.use(express.json());
+
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
+
+app.use("/api/auth/login", loginLimiter);
+app.use("/api", apiLimiter);
+
+app.use("/api/auth", authRoutes);
+app.use("/api", authMiddleware);
 
 mongoose
   .connect(process.env.MONGO_URI, {
@@ -40,42 +82,6 @@ app.use("/api/subscriptions", subscriptionRoutes);
 // Root API endpoint
 app.get("/api", (req, res) => {
   res.send("✅ ChurchDB API is running");
-});
-
-// Test endpoints
-app.get("/api/test-db", async (req, res) => {
-  try {
-    const db = mongoose.connection.db;
-    const collections = await db.listCollections().toArray();
-    const counts = {};
-    for (const col of collections) {
-      const count = await db.collection(col.name).countDocuments();
-      counts[col.name] = count;
-    }
-    res.json({
-      connected: mongoose.connection.readyState === 1,
-      databaseName: db.databaseName,
-      collections: collections.map((c) => c.name),
-      documentCounts: counts,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message, stack: err.stack });
-  }
-});
-
-app.get("/api/test-subscriptions", async (req, res) => {
-  try {
-    const Subscription = mongoose.model("Subscription");
-    const count = await Subscription.countDocuments();
-    const all = await Subscription.find().limit(5);
-    res.json({
-      count,
-      collectionName: Subscription.collection.name,
-      sample: all,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
 });
 
 // Serve static files from React build

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import '../../css/deathadd.css';
 import { generateBaptismCertificatePdf } from '../../utils/pdfExport';
+import { api } from '../../api';
 
 const NewBaptism = () => {
   // Form states
@@ -92,15 +93,7 @@ const NewBaptism = () => {
   const searchFamilies = async () => {
     try {
       setSearchLoading(true);
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/baptisms/search-families/${familySearch}`);
-
-      if (!res.ok) {
-        console.error("Search failed:", res.status);
-        return;
-      }
-
-      const data = await res.json();
+      const { data } = await api.get(`/baptisms/search-families/${familySearch}`);
       // Get unique family names
       const uniqueFamilies = [...new Set(data.map(f => f.name))];
       setFamilyResults(uniqueFamilies);
@@ -113,9 +106,7 @@ const NewBaptism = () => {
 
   const fetchHeadsOfFamily = async () => {
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/baptisms/heads-of-family/${selectedFamilyName}`);
-      const data = await res.json();
+      const { data } = await api.get(`/baptisms/heads-of-family/${selectedFamilyName}`);
       setHeadsOfFamily(data);
 
       // Reset subsequent selections
@@ -131,15 +122,7 @@ const NewBaptism = () => {
 
   const fetchUnbaptizedMembers = async (familyNumber) => {
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/baptisms/unbaptized-members/${familyNumber}`);
-
-      if (!res.ok) {
-        console.error("Failed to fetch members:", res.status);
-        return;
-      }
-
-      const data = await res.json();
+      const { data } = await api.get(`/baptisms/unbaptized-members/${familyNumber}`);
       setUnbaptizedMembers(data);
 
       // Reset member selection
@@ -226,18 +209,7 @@ const NewBaptism = () => {
         payload.member_id = selectedMember._id;
       }
 
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/baptisms`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to add baptism record');
-      }
+      const { data } = await api.post('/baptisms', payload);
 
       alert('✅ Baptism record added successfully!');
       setSavedRecord(data.data);

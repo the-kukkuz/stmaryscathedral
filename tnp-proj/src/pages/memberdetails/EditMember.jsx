@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../../css/editmember.css";
+import { api } from "../../api";
 
 const EditMember = () => {
   const [families, setFamilies] = useState([]);
@@ -27,10 +28,8 @@ const EditMember = () => {
 
   // ✅ Fetch all families on load
   useEffect(() => {
-    const API = import.meta.env.VITE_API_URL;
-    fetch(`${API}/api/families`)
-      .then((res) => res.json())
-      .then((data) => setFamilies(data))
+    api.get("/families")
+      .then(({ data }) => setFamilies(data))
       .catch((err) => console.error("❌ Error fetching families:", err));
   }, []);
 
@@ -94,12 +93,7 @@ const EditMember = () => {
   // ✅ Fetch members for a family
   const fetchMembers = async (family_number) => {
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(
-        `${API}/api/members?family_number=${family_number}`
-      );
-      if (!res.ok) throw new Error("Failed to fetch members");
-      const data = await res.json();
+      const { data } = await api.get(`/members?family_number=${family_number}`);
       setMembers(data);
     } catch (err) {
       console.error(err);
@@ -167,17 +161,7 @@ const EditMember = () => {
         baptism: formData.baptismStatus === "Yes",
       };
 
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(
-        `${API}/api/members/${selectedMember}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!res.ok) throw new Error("Failed to update member");
+      await api.put(`/members/${selectedMember}`, payload);
       alert("✅ Member updated successfully!");
     } catch (err) {
       alert(`❌ Error updating member: ${err.message}`);

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 import './App.css'
 import Navbar from './components/navbar'
 import About from './About';
@@ -46,12 +47,58 @@ function BackButton() {
 function App() {
   const navigate = useNavigate()
 
+  const isTokenValid = (token) => {
+    if (!token) return false;
+    try {
+      const decoded = jwtDecode(token);
+      if (!decoded?.exp) return false;
+      const now = Math.floor(Date.now() / 1000);
+      return decoded.exp > now;
+    } catch {
+      return false;
+    }
+  };
+
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem('isAuthenticated')
-    if (!isAuthenticated) {
-      navigate('/SignIn')
+    const token = localStorage.getItem('token');
+    if (!isTokenValid(token)) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      navigate('/SignIn');
     }
   }, [navigate])
+
+  useEffect(() => {
+    const originalFetch = window.fetch;
+
+    window.fetch = async (input, init = {}) => {
+      const token = localStorage.getItem('token');
+      const headers = new Headers(init.headers || {});
+
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+
+      const response = await originalFetch(input, {
+        ...init,
+        headers
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        if (window.location.pathname !== '/SignIn') {
+          navigate('/SignIn');
+        }
+      }
+
+      return response;
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [navigate]);
 
   return (
     <>

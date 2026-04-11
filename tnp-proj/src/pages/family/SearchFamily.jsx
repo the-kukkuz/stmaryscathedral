@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import "../../css/searchfamily.css";
 import { useNavigate } from "react-router-dom";
 import { generateTablePdf, downloadCsv } from "../../utils/pdfExport";
+import { api } from "../../api";
 
 const SearchFamily = () => {
   const [families, setFamilies] = useState([]);
@@ -65,10 +66,8 @@ const SearchFamily = () => {
 
   /* ================= FETCH DATA ================= */
   useEffect(() => {
-    const API = import.meta.env.VITE_API_URL;
-    fetch(`${API}/api/families`)
-      .then((res) => res.json())
-      .then((data) => setFamilies(data))
+    api.get("/families")
+      .then(({ data }) => setFamilies(data))
       .catch((err) =>
         console.error("Error fetching families:", err)
       );

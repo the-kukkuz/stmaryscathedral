@@ -10,7 +10,31 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("username");
+      if (window.location.pathname !== "/SignIn") {
+        window.location.href = "/SignIn";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default API_BASE;
+export { api };
 
 export const getMembers = () => api.get("/members");
 export const createMember = (memberData) => api.post("/members", memberData);

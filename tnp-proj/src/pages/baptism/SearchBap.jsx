@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../../css/viewbaptism.css";
 import { generateTablePdf, generateBaptismCertificatePdf, downloadCsv } from "../../utils/pdfExport";
+import { api } from "../../api";
 
 const SearchBap = () => {
   const [baptisms, setBaptisms] = useState([]);
@@ -21,10 +22,7 @@ const SearchBap = () => {
   const fetchBaptisms = async () => {
     try {
       setLoading(true);
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/baptisms`);
-      if (!res.ok) throw new Error("Failed to fetch baptism records");
-      const data = await res.json();
+      const { data } = await api.get("/baptisms");
       setBaptisms(data);
     } catch (err) {
       console.error("Error fetching baptisms:", err);
@@ -38,9 +36,7 @@ const SearchBap = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this record?")) return;
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/baptisms/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
+      await api.delete(`/baptisms/${id}`);
       alert("Deleted successfully");
       fetchBaptisms();
     } catch {
@@ -85,13 +81,7 @@ const SearchBap = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/baptisms/${editData._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editData),
-      });
-      if (!res.ok) throw new Error();
+      await api.put(`/baptisms/${editData._id}`, editData);
       alert("✅ Record updated successfully");
       setEditModal(false);
       fetchBaptisms();
