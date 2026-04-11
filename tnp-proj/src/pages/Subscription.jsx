@@ -416,11 +416,13 @@ const Subscription = () => {
     const extra = Number(multiForm.extra_amount) || 0;
     const subtotal = multiSelectedYears.length * amount;
     const grandTotal = subtotal + extra;
-    const yearsList = [...multiSelectedYears].sort((a, b) => a - b).join(", ");
+    const sortedSelectedYears = [...multiSelectedYears].sort((a, b) => a - b);
+    const lastSelectedYear = sortedSelectedYears[sortedSelectedYears.length - 1];
+    const yearsList = sortedSelectedYears.join(", ");
 
-    let confirmMsg = `💰 Confirm Multi-Year Payment\n\nYears: ${yearsList}\nAmount per year: ₹${amount}\nSubtotal: ₹${subtotal}`;
+    let confirmMsg = `💰 Confirm Multi-Year Payment\n\nYears: ${yearsList}\nAmount per year: ₹${amount}\nBase: ${multiSelectedYears.length} × ₹${amount} = ₹${subtotal}`;
     if (extra > 0) {
-      confirmMsg += `\nExtra amount: ₹${extra}`;
+      confirmMsg += `\nExtra: +₹${extra} on year ${lastSelectedYear}`;
     }
     confirmMsg += `\nGrand Total: ₹${grandTotal}\n\nProceed?`;
 
@@ -450,11 +452,26 @@ const Subscription = () => {
 
       const createdCount = data.created?.length || 0;
       const failedCount = data.failed?.length || 0;
+      const createdSorted = [...(data.created || [])].sort((a, b) => a.year - b.year);
+      const appliedYear = data.extra_applied_to_year;
+      const updatedRate = Math.max(Number(familyData?.subscription_amount) || 0, amount + extra);
 
-      let msg = `✅ Payment complete!\n${createdCount} record(s) created.`;
-      if (data.extra_applied_to_year) {
-        msg += `\n\n💡 Extra ₹${extra} applied to year ${data.extra_applied_to_year}.`;
+      let msg = `✅ ${createdCount} years paid.`;
+
+      if (createdSorted.length > 0) {
+        const lines = createdSorted.map((r) => `${r.year}: ₹${r.amount}`);
+        msg += `\n${lines.join("\n")}`;
+
+        if (appliedYear !== undefined && appliedYear !== null) {
+          const lastYearRecord = createdSorted.find((r) => r.year === appliedYear);
+          if (lastYearRecord && extra > 0) {
+            msg += `\n${appliedYear}: ₹${lastYearRecord.amount} (includes ₹${extra} extra)`;
+          }
+        }
       }
+
+      msg += `\nSubscription rate updated to ₹${updatedRate}.`;
+
       if (failedCount > 0) {
         msg += `\n\n⚠️ ${failedCount} year(s) failed: ${data.failed.map(f => `${f.year} (${f.reason})`).join(", ")}`;
       }
@@ -501,6 +518,9 @@ const Subscription = () => {
   const multiSubtotal = multiSelectedYears.length * (Number(multiForm.amount_per_year) || 0);
   const multiExtra = Number(multiForm.extra_amount) || 0;
   const multiGrandTotal = multiSubtotal + multiExtra;
+  const multiLastSelectedYear = multiSelectedYears.length
+    ? [...multiSelectedYears].sort((a, b) => a - b)[multiSelectedYears.length - 1]
+    : null;
 
   // ═══════════════════════════════════════════
   //  RENDER
@@ -814,7 +834,7 @@ const Subscription = () => {
                         />
                       </div>
                       <div className="bulk-field extra-amount-field">
-                        <label>Extra Amount (₹) <span className="field-hint">applied to next unpaid year</span></label>
+                        <label>Extra Amount (₹) — added on top of the last selected year</label>
                         <input
                           type="number"
                           value={multiForm.extra_amount}
@@ -882,17 +902,18 @@ const Subscription = () => {
                         </span>
                       </div>
                       <div className="summary-row">
-                        <span className="summary-label">Subtotal:</span>
+                        <span className="summary-label">Base:</span>
                         <span className="summary-value">
                           {multiSelectedYears.length} {multiSelectedYears.length === 1 ? "year" : "years"} × ₹{multiForm.amount_per_year || 0} = {formatCurrency(multiSubtotal)}
                         </span>
                       </div>
-                      {multiExtra > 0 && (
-                        <div className="summary-row summary-extra">
-                          <span className="summary-label">Extra Amount:</span>
-                          <span className="summary-value">+ {formatCurrency(multiExtra)}</span>
-                        </div>
-                      )}
+                      <div className="summary-row summary-extra">
+                        <span className="summary-label">Extra:</span>
+                        <span className="summary-value">
+                          + {formatCurrency(multiExtra)}
+                          {multiLastSelectedYear ? ` on year ${multiLastSelectedYear}` : ""}
+                        </span>
+                      </div>
                       <div className="summary-row summary-grand-total">
                         <span className="summary-label">Grand Total:</span>
                         <span className="summary-value">{formatCurrency(multiGrandTotal)}</span>

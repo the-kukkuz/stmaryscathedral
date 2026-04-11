@@ -70,18 +70,22 @@ export const inferParentSpouseNames = (member, familyMembers = [], hofName = '')
   let father = null;
   let mother = null;
   let spouse = null;
+
+  const isMale = (gender) => (gender || '').toLowerCase() === 'male';
+  const isFemale = (gender) => (gender || '').toLowerCase() === 'female';
+
+  const fatherCandidates = [];
+  const motherCandidates = [];
   
   familyMembers.forEach(mem => {
     const memRelation = normalizeRelation(mem.relation);
-    
-    // Find father (HoF or husband or father)
-    if (memRelation === 'husband' || memRelation === 'father' || memRelation === 'hof') {
-      father = mem;
+
+    if ((memRelation === 'father') || ((memRelation === 'husband' || memRelation === 'hof') && isMale(mem.gender))) {
+      fatherCandidates.push(mem);
     }
-    
-    // Find mother (wife or mother)
-    if (memRelation === 'wife' || memRelation === 'mother') {
-      mother = mem;
+
+    if ((memRelation === 'mother') || ((memRelation === 'wife') && isFemale(mem.gender))) {
+      motherCandidates.push(mem);
     }
     
     // For HoF looking for wife
@@ -94,6 +98,14 @@ export const inferParentSpouseNames = (member, familyMembers = [], hofName = '')
       spouse = mem;
     }
   });
+
+  father = fatherCandidates.find((mem) => normalizeRelation(mem.relation) === 'father')
+    || fatherCandidates.find((mem) => normalizeRelation(mem.relation) === 'husband' || normalizeRelation(mem.relation) === 'hof')
+    || null;
+
+  mother = motherCandidates.find((mem) => normalizeRelation(mem.relation) === 'mother')
+    || motherCandidates.find((mem) => normalizeRelation(mem.relation) === 'wife')
+    || null;
   
   // Infer based on relation type
   switch (relation) {
@@ -101,6 +113,7 @@ export const inferParentSpouseNames = (member, familyMembers = [], hofName = '')
     case 'daughter':
       // Direct children - use found father/mother
       if (father) result.fatherName = father.name || '';
+      else if (hofName) result.fatherName = hofName;
       if (mother) result.motherName = mother.name || '';
       break;
       
@@ -109,6 +122,7 @@ export const inferParentSpouseNames = (member, familyMembers = [], hofName = '')
       // Grandchildren - parents might be son/daughter in the family
       // For now, show grandparents as parents (can be edited if needed)
       if (father) result.fatherName = father.name || '';
+      else if (hofName) result.fatherName = hofName;
       if (mother) result.motherName = mother.name || '';
       break;
       

@@ -244,7 +244,7 @@ router.get("/year/:year", async (req, res) => {
   }
 });
 
-// ➕ POST - Bulk Pay multiple years (with optional extra_amount)
+// ➕ POST - Bulk Pay multiple years (extra applies only to last selected year)
 router.post("/bulk-pay", async (req, res) => {
   try {
     const {
@@ -278,20 +278,13 @@ router.post("/bulk-pay", async (req, res) => {
       return res.status(404).json({ error: "Family not found" });
     }
 
-    // Validate amount >= family.subscription_amount (business rule)
-    if (family.subscription_amount && amount < family.subscription_amount) {
-      return res.status(400).json({
-        error: `Amount (${amount}) cannot be less than the family's current subscription rate (${family.subscription_amount}). Use the 'Change Subscription Amount' feature to decrease the rate.`
-      });
-    }
-
     const created = [];
     const failed = [];
 
     // Sort years ascending so last_year is the highest
     const sortedYears = [...years].sort((a, b) => a - b);
     const lastYear = sortedYears[sortedYears.length - 1];
-    let extra_applied_to_year = extra > 0 ? lastYear : null;
+    const extra_applied_to_year = lastYear;
 
     for (const year of sortedYears) {
       try {
@@ -315,7 +308,7 @@ router.post("/bulk-pay", async (req, res) => {
           existing.receipt_number = receipt_number || "";
           existing.notes = notes || "";
           await existing.save();
-          created.push(existing.toObject());
+          created.push({ year, amount: yearAmount });
         } else {
           // Create new subscription record
           const subscription = new Subscription({
@@ -331,19 +324,22 @@ router.post("/bulk-pay", async (req, res) => {
             notes: notes || ""
           });
           await subscription.save();
-          created.push(subscription.toObject());
+          created.push({ year, amount: yearAmount });
         }
       } catch (yearErr) {
         failed.push({ year, reason: yearErr.message });
       }
     }
 
-    // Update family subscription_amount to the highest amount paid
-    const highestAmount = amount + extra; // last year's amount is always the highest
-    if (!family.subscription_amount || highestAmount > family.subscription_amount) {
+    // Update family subscription_amount to max(current_rate, last_year_amount)
+    const highestAmount = amount + extra;
+    const currentRate = Number(family.subscription_amount) || 0;
+    const updatedRate = Math.max(currentRate, highestAmount);
+
+    if (updatedRate !== currentRate) {
       await Family.findOneAndUpdate(
         { family_number },
-        { subscription_amount: highestAmount }
+        { subscription_amount: updatedRate }
       );
     }
 

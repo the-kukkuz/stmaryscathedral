@@ -85,18 +85,21 @@ const AddDeathRecord = () => {
       .catch((err) => console.error("Error fetching families:", err));
   }, []);
 
-  // Filter families by name
+  // Filter families by name + selected block/unit
   useEffect(() => {
     if (searchQuery.trim() === "" || (selectedFamily && searchQuery === selectedFamily.name)) {
       setFilteredFamilies([]);
     } else {
       setFilteredFamilies(
-        families.filter((fam) =>
-          fam.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+        families.filter((fam) => {
+          const nameMatch = fam.name.toLowerCase().includes(searchQuery.toLowerCase());
+          const blockMatch = !formData.block || String(fam.ward_number) === String(formData.block);
+          const unitMatch = !formData.unit || String(fam.family_unit) === String(formData.unit);
+          return nameMatch && blockMatch && unitMatch;
+        })
       );
     }
-  }, [searchQuery, families, selectedFamily]);
+  }, [searchQuery, families, selectedFamily, formData.block, formData.unit]);
 
   // Fetch members when family selected
   useEffect(() => {
@@ -118,7 +121,7 @@ const AddDeathRecord = () => {
       const API = import.meta.env.VITE_API_URL;
       
       // Fetch family data to get location, village, and hof name
-      fetch(`${API}/api/families/${selectedFamily.family_number}`)
+      fetch(`${API}/api/families/number/${selectedFamily.family_number}`)
         .then((res) => res.json())
         .then((family) => {
           const memberObj = members.find((m) => m._id === selectedMember);
@@ -333,13 +336,18 @@ const AddDeathRecord = () => {
             {formData.block && (
               <div className="input-group">
                 <label>Unit</label>
-                <input
-                  type="text"
+                <select
                   name="unit"
                   value={formData.unit}
                   onChange={handleChange}
-                  placeholder="Enter unit"
-                />
+                >
+                  <option value="">Select Unit</option>
+                  {(blockUnits[parseInt(formData.block)] || []).map((unit) => (
+                    <option key={unit.number} value={String(unit.number)}>
+                      Unit {unit.number} — {unit.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
           </>
