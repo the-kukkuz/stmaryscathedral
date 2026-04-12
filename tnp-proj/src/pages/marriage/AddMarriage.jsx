@@ -47,8 +47,14 @@ const AddMarriage = () => {
 
   // Fetch all members on component mount
   useEffect(() => {
+<<<<<<< HEAD
     api.get('/members')
       .then(({ data }) => {
+=======
+    fetch("/api/members")
+      .then((res) => res.json())
+      .then((data) => {
+>>>>>>> 5e2b8a1 (railway config)
         // Filter out deceased members
         const activeMembers = data.filter(member => !member.deceased);
         setAllMembers(activeMembers);
@@ -285,7 +291,24 @@ const AddMarriage = () => {
 
 
     try {
+<<<<<<< HEAD
       const { data } = await api.post('/marriages', payload);
+=======
+      const res = await fetch(
+        "/api/marriages",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to add marriage record");
+      }
+>>>>>>> 5e2b8a1 (railway config)
 
       alert("✅ Marriage record added successfully!");
       setSavedRecord(data.marriage);

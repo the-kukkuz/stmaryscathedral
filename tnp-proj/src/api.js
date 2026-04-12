@@ -1,7 +1,11 @@
 // src/api.js
 import axios from "axios";
 
+<<<<<<< HEAD
 const API_BASE = import.meta.env.VITE_API_URL + "/api";
+=======
+const API_BASE = "/api";
+>>>>>>> 5e2b8a1 (railway config)
 
 const api = axios.create({
   baseURL: API_BASE,

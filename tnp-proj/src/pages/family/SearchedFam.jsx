@@ -14,8 +14,14 @@ const SearchedFam = () => {
   useEffect(() => {
     if (!family_number) return;
 
+<<<<<<< HEAD
     api.get(`/members?family_number=${family_number}`)
       .then(({ data }) => setMembers(data))
+=======
+    fetch(`/api/members?family_number=${family_number}`)
+      .then((res) => res.json())
+      .then((data) => setMembers(data))
+>>>>>>> 5e2b8a1 (railway config)
       .catch((err) => {
         console.error("Error fetching members:", err);
         setError("Could not load members");

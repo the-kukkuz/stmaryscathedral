@@ -52,7 +52,15 @@ const ExistingFamilymem = () => {
   const fetchFamilyDetails = async (familyNumber) => {
     try {
       if (!familyNumber) return;
+<<<<<<< HEAD
       const { data } = await api.get(`/families/number/${familyNumber}`);
+=======
+      const res = await fetch(
+        `/api/families/number/${familyNumber}`
+      );
+      if (!res.ok) throw new Error("Family not found");
+      const data = await res.json();
+>>>>>>> 5e2b8a1 (railway config)
       setFamilyInfo({
         name: data.name || "",
         hof: data.hof || "",
@@ -132,7 +140,20 @@ const ExistingFamilymem = () => {
         baptism: formData.baptismStatus === "Yes",
       };
 
+<<<<<<< HEAD
       await api.post("/members", payload);
+=======
+      const res = await fetch("/api/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Failed to add member");
+      }
+>>>>>>> 5e2b8a1 (railway config)
 
       alert("✅ Member added successfully!");
       

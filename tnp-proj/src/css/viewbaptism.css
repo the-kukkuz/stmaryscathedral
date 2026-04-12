@@ -336,7 +336,14 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+<<<<<<< HEAD
   padding: 16px 24px;
   background: var(--cream-mid);
   border-top: 1px solid var(--cream-dark);
 }
+=======
+  padding: 14px 24px;
+  background: #f5ebe0;
+  border-top: 1px solid #d7ccc8;
+}
+>>>>>>> 5e2b8a1 (railway config)

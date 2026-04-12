@@ -93,7 +93,21 @@ const NewBaptism = () => {
   const searchFamilies = async () => {
     try {
       setSearchLoading(true);
+<<<<<<< HEAD
       const { data } = await api.get(`/baptisms/search-families/${familySearch}`);
+=======
+      console.log("Searching for:", familySearch); // Debug
+      const res = await fetch(`/api/baptisms/search-families/${familySearch}`);
+
+      if (!res.ok) {
+        console.error("Search failed:", res.status);
+        return;
+      }
+
+      const data = await res.json();
+      console.log("Search results:", data); // Debug
+
+>>>>>>> 5e2b8a1 (railway config)
       // Get unique family names
       const uniqueFamilies = [...new Set(data.map(f => f.name))];
       setFamilyResults(uniqueFamilies);
@@ -106,7 +120,12 @@ const NewBaptism = () => {
 
   const fetchHeadsOfFamily = async () => {
     try {
+<<<<<<< HEAD
       const { data } = await api.get(`/baptisms/heads-of-family/${selectedFamilyName}`);
+=======
+      const res = await fetch(`/api/baptisms/heads-of-family/${selectedFamilyName}`);
+      const data = await res.json();
+>>>>>>> 5e2b8a1 (railway config)
       setHeadsOfFamily(data);
 
       // Reset subsequent selections
@@ -122,7 +141,22 @@ const NewBaptism = () => {
 
   const fetchUnbaptizedMembers = async (familyNumber) => {
     try {
+<<<<<<< HEAD
       const { data } = await api.get(`/baptisms/unbaptized-members/${familyNumber}`);
+=======
+      console.log("Fetching unbaptized members for family:", familyNumber);
+      const res = await fetch(`/api/baptisms/unbaptized-members/${familyNumber}`);
+
+      if (!res.ok) {
+        console.error("Failed to fetch members:", res.status);
+        return;
+      }
+
+      const data = await res.json();
+      console.log("Unbaptized members response:", data);
+      console.log("Number of unbaptized members:", data.length);
+
+>>>>>>> 5e2b8a1 (railway config)
       setUnbaptizedMembers(data);
 
       // Reset member selection
@@ -209,7 +243,22 @@ const NewBaptism = () => {
         payload.member_id = selectedMember._id;
       }
 
+<<<<<<< HEAD
       const { data } = await api.post('/baptisms', payload);
+=======
+
+      const res = await fetch('/api/baptisms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to add baptism record');
+      }
+>>>>>>> 5e2b8a1 (railway config)
 
       alert('✅ Baptism record added successfully!');
       setSavedRecord(data.data);
