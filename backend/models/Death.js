@@ -1,15 +1,31 @@
 import mongoose from "mongoose";
 
 const DeathRecordSchema = new mongoose.Schema({
-  sl_no: {
-    type: Number,
+
+  reg_no: {
+    type: String,
+  },
+
+  // 🔑 Key switch
+  isParishioner: {
+    type: Boolean,
     required: true,
-    unique: true,
+  },
+
+  // -------------------
+  // Parishioner only
+  // -------------------
+  member_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Member",
   },
   family_no: {
     type: String,
-    required: true,
   },
+
+  // -------------------
+  // Common Person Info
+  // -------------------
   name: {
     type: String,
     required: true,
@@ -26,6 +42,10 @@ const DeathRecordSchema = new mongoose.Schema({
   mother_wife_name: {
     type: String,
   },
+
+  // -------------------
+  // Death Details
+  // -------------------
   death_date: {
     type: Date,
     required: true,
@@ -48,6 +68,13 @@ const DeathRecordSchema = new mongoose.Schema({
   remarks: {
     type: String,
   },
+  block: {
+    type: String,
+  },
+  unit: {
+    type: String,
+  }
+
 }, { timestamps: true });
 
 export default mongoose.model("DeathRecord", DeathRecordSchema);

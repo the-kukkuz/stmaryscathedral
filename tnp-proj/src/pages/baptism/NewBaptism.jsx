@@ -1,38 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import '../../css/baptism.css';
+import '../../css/deathadd.css';
+import { generateBaptismCertificatePdf } from '../../utils/pdfExport';
+import { api } from '../../api';
 
 const NewBaptism = () => {
   // Form states
   const [familySearch, setFamilySearch] = useState('');
   const [familyResults, setFamilyResults] = useState([]);
   const [selectedFamilyName, setSelectedFamilyName] = useState('');
-  
+
   const [headsOfFamily, setHeadsOfFamily] = useState([]);
   const [selectedFamilyId, setSelectedFamilyId] = useState('');
   const [selectedFamily, setSelectedFamily] = useState(null);
-  
+
   const [unbaptizedMembers, setUnbaptizedMembers] = useState([]);
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [selectedMember, setSelectedMember] = useState(null);
+  const [isParishioner, setIsParishioner] = useState(true);
 
   // Baptism form data
   const [formData, setFormData] = useState({
+    member_name: '',
+    member_dob: '',
+    gender: '',
+    home_parish: '',
+    address: '',
+    father_name: '',
+    mother_name: '',
     date_of_baptism: '',
     place_of_baptism: '',
     church_where_baptised: '',
     bapt_name: '',
     godparent_name: '',
     godparent_house_name: '',
+    baptised_by: '',
     certificate_number: '',
     remarks: ''
   });
 
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [savedRecord, setSavedRecord] = useState(null);
 
   // Search families as user types
   useEffect(() => {
-    if (familySearch.length >= 2) {
+    if (familySearch.length >= 2 && familySearch !== selectedFamilyName) {
       const delaySearch = setTimeout(() => {
         searchFamilies();
       }, 300);
@@ -40,7 +52,7 @@ const NewBaptism = () => {
     } else {
       setFamilyResults([]);
     }
-  }, [familySearch]);
+  }, [familySearch, selectedFamilyName]);
 
   // Fetch heads of family when family name is selected
   useEffect(() => {
@@ -62,39 +74,28 @@ const NewBaptism = () => {
 
   // Auto-fill member details when member is selected
   useEffect(() => {
-    if (selectedMemberId) {
+    if (selectedMemberId && unbaptizedMembers.length > 0) {
       const member = unbaptizedMembers.find(m => m._id === selectedMemberId);
       setSelectedMember(member);
-      
+
       if (member) {
         // Auto-fill form data
         setFormData(prev => ({
           ...prev,
-          bapt_name: member.name,
+          bapt_name: member.name || '',
           place_of_baptism: selectedFamily?.location || '',
           church_where_baptised: selectedFamily?.location || ''
         }));
       }
     }
-  }, [selectedMemberId]);
+  }, [selectedMemberId, unbaptizedMembers, selectedFamily]);
 
   const searchFamilies = async () => {
     try {
       setSearchLoading(true);
-      console.log("Searching for:", familySearch); // Debug
-      const res = await fetch(`http://localhost:8080/api/baptisms/search-families/${familySearch}`);
-      
-      if (!res.ok) {
-        console.error("Search failed:", res.status);
-        return;
-      }
-      
-      const data = await res.json();
-      console.log("Search results:", data); // Debug
-      
+      const { data } = await api.get(`/baptisms/search-families/${familySearch}`);
       // Get unique family names
       const uniqueFamilies = [...new Set(data.map(f => f.name))];
-      console.log("Unique families:", uniqueFamilies); // Debug
       setFamilyResults(uniqueFamilies);
     } catch (err) {
       console.error('Error searching families:', err);
@@ -105,10 +106,9 @@ const NewBaptism = () => {
 
   const fetchHeadsOfFamily = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/baptisms/heads-of-family/${selectedFamilyName}`);
-      const data = await res.json();
+      const { data } = await api.get(`/baptisms/heads-of-family/${selectedFamilyName}`);
       setHeadsOfFamily(data);
-      
+
       // Reset subsequent selections
       setSelectedFamilyId('');
       setSelectedFamily(null);
@@ -122,20 +122,9 @@ const NewBaptism = () => {
 
   const fetchUnbaptizedMembers = async (familyNumber) => {
     try {
-      console.log("Fetching unbaptized members for family:", familyNumber);
-      const res = await fetch(`http://localhost:8080/api/baptisms/unbaptized-members/${familyNumber}`);
-      
-      if (!res.ok) {
-        console.error("Failed to fetch members:", res.status);
-        return;
-      }
-      
-      const data = await res.json();
-      console.log("Unbaptized members response:", data);
-      console.log("Number of unbaptized members:", data.length);
-      
+      const { data } = await api.get(`/baptisms/unbaptized-members/${familyNumber}`);
       setUnbaptizedMembers(data);
-      
+
       // Reset member selection
       setSelectedMemberId('');
       setSelectedMember(null);
@@ -158,11 +147,53 @@ const NewBaptism = () => {
     }));
   };
 
+  const handleParishionerToggle = (value) => {
+    setIsParishioner(value);
+
+    // Reset dependent state safely
+    setFamilySearch('');
+    setSelectedFamilyName('');
+    setHeadsOfFamily([]);
+    setSelectedFamilyId('');
+    setSelectedFamily(null);
+    setUnbaptizedMembers([]);
+    setSelectedMemberId('');
+    setSelectedMember(null);
+
+    setFormData(prev => ({
+      ...prev,
+      member_name: '',
+      member_dob: '',
+      gender: '',
+      home_parish: '',
+      bapt_name: '',
+      place_of_baptism: '',
+      church_where_baptised: ''
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!selectedMember) {
-      alert('Please select a member to baptize');
+
+    if (isParishioner && !selectedMember) {
+      alert('⚠️ Please select a member to baptize');
+      return;
+    }
+
+    if (!isParishioner) {
+      if (!formData.member_name?.trim() || !formData.member_dob || !formData.gender) {
+        alert('⚠️ Please complete all person details (Name, DOB, Gender)');
+        return;
+      }
+    }
+
+    if (!formData.date_of_baptism) {
+      alert('⚠️ Please select a baptism date');
+      return;
+    }
+
+    if (!formData.bapt_name?.trim()) {
+      alert('⚠️ Please enter the baptism name');
       return;
     }
 
@@ -170,24 +201,19 @@ const NewBaptism = () => {
 
     try {
       const payload = {
-        member_id: selectedMember._id,
+        isParishioner,
         ...formData
       };
 
-      const res = await fetch('http://localhost:8080/api/baptisms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to add baptism record');
+      if (isParishioner) {
+        payload.member_id = selectedMember._id;
       }
 
+      const { data } = await api.post('/baptisms', payload);
+
       alert('✅ Baptism record added successfully!');
-      
+      setSavedRecord(data.data);
+
       // Reset form
       resetForm();
     } catch (err) {
@@ -208,93 +234,97 @@ const NewBaptism = () => {
     setUnbaptizedMembers([]);
     setSelectedMemberId('');
     setSelectedMember(null);
+    setIsParishioner(true);
     setFormData({
+      member_name: '',
+      member_dob: '',
+      gender: '',
+      home_parish: '',
+      address: '',
+      father_name: '',
+      mother_name: '',
       date_of_baptism: '',
       place_of_baptism: '',
       church_where_baptised: '',
       bapt_name: '',
       godparent_name: '',
       godparent_house_name: '',
+      baptised_by: '',
       certificate_number: '',
       remarks: ''
     });
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
-  const calculateAge = (dob) => {
-    if (!dob) return 'N/A';
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
   return (
-    <div className="baptism-container">
-      <h1 className="baptism-title">Add New Baptism Record</h1>
+    <div className="container">
+      <form className="register-form" onSubmit={handleSubmit}>
+        <h2>Add New Baptism Record</h2>
 
-      <div className="baptism-form-card">
-        <form onSubmit={handleSubmit}>
-          
-          {/* Step 1: Search and Select Family Name */}
-          <div className="form-section">
-            <h2 className="section-title">1. Select Family Name</h2>
-            <div className="search-box">
-              <label>Search Family Name *</label>
+        {/* Success banner with download */}
+        {savedRecord && (
+          <div style={{ background: '#e8f5e9', border: '1px solid #4caf50', borderRadius: '8px', padding: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+            <span style={{ color: '#2e7d32', fontWeight: 600 }}>✅ Baptism record saved successfully!</span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" className="submit-btn" style={{ background: '#8b5e3c' }} onClick={() => generateBaptismCertificatePdf(savedRecord)}>📄 Download Certificate</button>
+              <button type="button" className="submit-btn" style={{ background: '#888' }} onClick={() => setSavedRecord(null)}>✕ Dismiss</button>
+            </div>
+          </div>
+        )}
+
+        {/* Parishioner Toggle */}
+        <div className="toggle-row">
+          <span className="toggle-label">
+            {isParishioner ? "Parishioner" : "Non-Parishioner"}
+          </span>
+
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={isParishioner}
+              onChange={(e) => handleParishionerToggle(e.target.checked)}
+            />
+            <span className="slider"></span>
+          </label>
+        </div>
+
+        {/* ================= PARISHIONER FLOW ================= */}
+        {isParishioner && (
+          <>
+            <div className="input-group">
               <input
                 type="text"
-                placeholder="Type family name to search..."
                 value={familySearch}
                 onChange={(e) => setFamilySearch(e.target.value)}
-                className="form-input"
-                required
+                placeholder="Type family name to search..."
               />
+              <label>Search Family Name *</label>
               {searchLoading && (
                 <div className="search-loading">Searching...</div>
               )}
               {!searchLoading && familyResults.length > 0 && (
-                <ul className="search-results">
+                <ul className="suggestions">
                   {familyResults.map((familyName, idx) => (
                     <li
                       key={idx}
                       onClick={() => handleFamilyNameSelect(familyName)}
-                      className="search-result-item"
                     >
                       {familyName}
                     </li>
                   ))}
                 </ul>
               )}
-              {!searchLoading && familySearch.length >= 2 && familyResults.length === 0 && (
+              {!searchLoading && familySearch.length >= 2 && familyResults.length === 0 && familySearch !== selectedFamilyName && (
                 <div className="no-results-message">
                   No families found with name "{familySearch}"
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Step 2: Select Head of Family */}
-          {selectedFamilyName && headsOfFamily.length > 0 && (
-            <div className="form-section">
-              <h2 className="section-title">2. Select Head of Family</h2>
-              <div className="form-group">
-                <label>Head of Family (HOF) *</label>
+            {selectedFamilyName && headsOfFamily.length > 0 && (
+              <div className="input-group">
                 <select
                   value={selectedFamilyId}
                   onChange={(e) => setSelectedFamilyId(e.target.value)}
-                  className="form-select"
                   required
                 >
                   <option value="">-- Select HOF --</option>
@@ -304,201 +334,216 @@ const NewBaptism = () => {
                     </option>
                   ))}
                 </select>
+                <label>Head of Family (HOF) *</label>
               </div>
+            )}
 
-              {selectedFamily && (
-                <div className="info-box">
-                  <h3>Selected Family Details</h3>
-                  <div className="info-grid">
-                    <div><strong>Family Name:</strong> {selectedFamily.name}</div>
-                    <div><strong>Family Number:</strong> {selectedFamily.family_number}</div>
-                    <div><strong>HOF:</strong> {selectedFamily.hof}</div>
-                    <div><strong>Location:</strong> {selectedFamily.location || 'N/A'}</div>
-                    <div><strong>Contact:</strong> {selectedFamily.contact_number || 'N/A'}</div>
-                    <div><strong>Ward:</strong> {selectedFamily.ward_number || 'N/A'}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 3: Select Member */}
-          {selectedFamily && unbaptizedMembers.length > 0 && (
-            <div className="form-section">
-              <h2 className="section-title">3. Select Member to Baptize</h2>
-              <div className="form-group">
-                <label>Member Name *</label>
+            {selectedFamily && unbaptizedMembers.length > 0 && (
+              <div className="input-group">
                 <select
                   value={selectedMemberId}
                   onChange={(e) => setSelectedMemberId(e.target.value)}
-                  className="form-select"
                   required
                 >
                   <option value="">-- Select Member --</option>
-                  {unbaptizedMembers.map((member) => (
-                    <option key={member._id} value={member._id}>
-                      {member.name} - {member.gender} - {formatDate(member.dob)} ({calculateAge(member.dob)} years)
-                      {member.relation ? ` - ${member.relation}` : ''}
-                    </option>
-                  ))}
+                  {unbaptizedMembers.map((member) => {
+                    const dobStr = member.dob ? new Date(member.dob).toLocaleDateString() : 'N/A';
+                    return (
+                      <option key={member._id} value={member._id}>
+                        {member.name} - {member.gender} - {dobStr}
+                        {member.relation ? ` - ${member.relation}` : ''}
+                      </option>
+                    );
+                  })}
                 </select>
+                <label>Member to Baptize *</label>
               </div>
+            )}
 
-              {selectedMember && (
-                <div className="info-box">
-                  <h3>Selected Member Details</h3>
-                  <div className="info-grid">
-                    <div><strong>Name:</strong> {selectedMember.name}</div>
-                    <div><strong>Gender:</strong> {selectedMember.gender}</div>
-                    <div><strong>Date of Birth:</strong> {formatDate(selectedMember.dob)}</div>
-                    <div><strong>Age:</strong> {calculateAge(selectedMember.dob)} years</div>
-                    <div><strong>Relation:</strong> {selectedMember.relation || 'N/A'}</div>
-                    <div><strong>Phone:</strong> {selectedMember.phone || 'N/A'}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Show message if no unbaptized members */}
-          {selectedFamily && unbaptizedMembers.length === 0 && (
-            <div className="form-section">
-              <div className="no-members-message">
+            {selectedFamily && unbaptizedMembers.length === 0 && (
+              <div className="no-members-message" style={{ color: 'red', marginTop: '10px', marginBottom: '15px', fontSize: '14px' }}>
                 ⚠️ No unbaptized members found in this family. All members are either already baptized or marked as deceased.
               </div>
-            </div>
-          )}
+            )}
+          </>
+        )}
 
-          {/* Step 4: Baptism Details */}
-          {selectedMember && (
-            <div className="form-section">
-              <h2 className="section-title">4. Enter Baptism Details</h2>
-              
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>Baptism Name *</label>
-                  <input
-                    type="text"
-                    name="bapt_name"
-                    value={formData.bapt_name}
+        {/* ================= COMMON BAPTISM DETAILS ================= */}
+        {(isParishioner ? selectedMember : true) && (
+          <>
+            <h3 style={{ marginTop: '20px', marginBottom: '15px', borderBottom: '1px solid #ddd', paddingBottom: '5px' }}>
+              Baptism Details
+            </h3>
+
+            <div className="input-group">
+              <input
+                type="text"
+                name="bapt_name"
+                value={formData.bapt_name}
+                onChange={handleChange}
+                required
+              />
+              <label>Baptism Name of Child *</label>
+            </div>
+
+            {!isParishioner && (
+              <div className="input-group">
+                <input
+                  type="text"
+                  name="member_name"
+                  value={formData.member_name}
+                  onChange={handleChange}
+                  required
+                />
+                <label>Name of Child (Official Name) *</label>
+              </div>
+            )}
+
+            <div className="input-group">
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+              />
+              <label>Address</label>
+            </div>
+
+            {!isParishioner && (
+              <>
+                <div className="input-group">
+                  <select
+                    name="gender"
+                    value={formData.gender}
                     onChange={handleChange}
                     required
-                    className="form-input"
-                    placeholder="Enter baptism name"
-                  />
+                  >
+                    <option value="">-- Select --</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                  <label>Gender *</label>
                 </div>
+              </>
+            )}
 
-                <div className="form-group">
-                  <label>Date of Baptism *</label>
-                  <input
-                    type="date"
-                    name="date_of_baptism"
-                    value={formData.date_of_baptism}
-                    onChange={handleChange}
-                    required
-                    className="form-input"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Place of Baptism</label>
-                  <input
-                    type="text"
-                    name="place_of_baptism"
-                    value={formData.place_of_baptism}
-                    onChange={handleChange}
-                    className="form-input"
-                    placeholder="Enter place"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Church Where Baptised</label>
-                  <input
-                    type="text"
-                    name="church_where_baptised"
-                    value={formData.church_where_baptised}
-                    onChange={handleChange}
-                    className="form-input"
-                    placeholder="Enter church name"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Godparent Name</label>
-                  <input
-                    type="text"
-                    name="godparent_name"
-                    value={formData.godparent_name}
-                    onChange={handleChange}
-                    className="form-input"
-                    placeholder="Enter godparent name"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Godparent House Name</label>
-                  <input
-                    type="text"
-                    name="godparent_house_name"
-                    value={formData.godparent_house_name}
-                    onChange={handleChange}
-                    className="form-input"
-                    placeholder="Enter house name"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Certificate Number</label>
-                  <input
-                    type="text"
-                    name="certificate_number"
-                    value={formData.certificate_number}
-                    onChange={handleChange}
-                    className="form-input"
-                    placeholder="Enter certificate number"
-                  />
-                </div>
-
-                <div className="form-group full-width">
-                  <label>Remarks</label>
-                  <textarea
-                    name="remarks"
-                    value={formData.remarks}
-                    onChange={handleChange}
-                    rows="3"
-                    className="form-input"
-                    placeholder="Any additional remarks..."
-                  />
-                </div>
-              </div>
-
-              <div className="form-actions">
-                <button type="button" onClick={resetForm} className="reset-btn">
-                  🔄 Reset Form
-                </button>
-                <button type="submit" disabled={loading} className="submit-btn">
-                  {loading ? '⏳ Saving...' : '✅ Save Baptism Record'}
-                </button>
-              </div>
+            <div className="input-group">
+              <input
+                type="text"
+                name="father_name"
+                value={formData.father_name}
+                onChange={handleChange}
+              />
+              <label>Father's Name</label>
             </div>
-          )}
 
-          {/* Instructions */}
-          {!selectedFamilyName && (
-            <div className="instructions">
-              <h3>📋 Instructions</h3>
-              <ol>
-                <li>Start by typing and selecting the family name</li>
-                <li>Choose the Head of Family from the dropdown</li>
-                <li>Select the member to be baptized from the dropdown</li>
-                <li>Fill in the baptism details and submit</li>
-              </ol>
-              <p className="note">💡 Only unbaptized and living members will appear in the member dropdown</p>
+            <div className="input-group">
+              <input
+                type="text"
+                name="mother_name"
+                value={formData.mother_name}
+                onChange={handleChange}
+              />
+              <label>Mother's Name</label>
             </div>
-          )}
-        </form>
-      </div>
+
+            {!isParishioner && (
+              <div className="input-group">
+                <input
+                  type="date"
+                  name="member_dob"
+                  value={formData.member_dob}
+                  onChange={handleChange}
+                  required
+                />
+                <label>Date of Birth *</label>
+              </div>
+            )}
+
+            <div className="input-group">
+              <input
+                type="date"
+                name="date_of_baptism"
+                value={formData.date_of_baptism}
+                onChange={handleChange}
+                required
+              />
+              <label>Date of Baptism *</label>
+            </div>
+
+            <div className="input-group">
+              <input
+                type="text"
+                name="godparent_name"
+                value={formData.godparent_name}
+                onChange={handleChange}
+              />
+              <label>Name of Godfather/Godmother</label>
+            </div>
+
+            <div className="input-group">
+              <input
+                type="text"
+                name="godparent_house_name"
+                value={formData.godparent_house_name}
+                onChange={handleChange}
+              />
+              <label>Address of Godfather/Godmother</label>
+            </div>
+
+            <div className="input-group">
+              <input
+                type="text"
+                name="church_where_baptised"
+                value={formData.church_where_baptised}
+                onChange={handleChange}
+              />
+              <label>Name & Address of Church where Baptized</label>
+            </div>
+
+            <div className="input-group">
+              <input
+                type="text"
+                name="baptised_by"
+                value={formData.baptised_by}
+                onChange={handleChange}
+              />
+              <label>Baptised By</label>
+            </div>
+
+            {!isParishioner && (
+              <div className="input-group">
+                <input
+                  type="text"
+                  name="home_parish"
+                  value={formData.home_parish}
+                  onChange={handleChange}
+                />
+                <label>Home Parish</label>
+              </div>
+            )}
+
+            <div className="input-group">
+              <textarea
+                name="remarks"
+                value={formData.remarks}
+                onChange={handleChange}
+                rows="3"
+              />
+              <label>Remarks</label>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button type="button" onClick={resetForm} className="fetch-btn" style={{ flex: 1, backgroundColor: '#6c757d' }}>
+                🔄 Reset
+              </button>
+              <button type="submit" disabled={loading} className="submit-btn" style={{ flex: 2 }}>
+                {loading ? '⏳ Saving...' : 'Add Baptism Record'}
+              </button>
+            </div>
+          </>
+        )}
+      </form>
     </div>
   );
 };

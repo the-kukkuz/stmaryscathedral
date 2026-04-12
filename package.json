@@ -1,6 +1,12 @@
 {
+  "name": "stmaryscathedral",
+  "private": true,
+  "scripts": {
+    "install-all": "npm install --prefix tnp-proj && npm install --prefix backend",
+    "build": "npm run build --prefix tnp-proj",
+    "start": "npm run start --prefix backend"
+  },
   "dependencies": {
     "react-icons": "^5.5.0"
   }
-  
 }

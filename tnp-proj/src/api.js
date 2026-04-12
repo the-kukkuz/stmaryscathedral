@@ -1,7 +1,7 @@
 // src/api.js
 import axios from "axios";
 
-const API_BASE = "http://localhost:8080/api";
+const API_BASE = import.meta.env.VITE_API_URL + "/api";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -10,15 +10,36 @@ const api = axios.create({
   },
 });
 
-// default export (so imports like `import API_BASE from './api'` still work)
-export default API_BASE;
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-// named exports (recommended to use these in components)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("username");
+      if (window.location.pathname !== "/SignIn") {
+        window.location.href = "/SignIn";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default API_BASE;
+export { api };
+
 export const getMembers = () => api.get("/members");
 export const createMember = (memberData) => api.post("/members", memberData);
 export const updateMember = (id, data) => api.put(`/members/${id}`, data);
 export const deleteMember = (id) => api.delete(`/members/${id}`);
 
-// You can add other entity helpers similarly
 export const getFamilies = () => api.get("/families");
 export const createFamily = (data) => api.post("/families", data);

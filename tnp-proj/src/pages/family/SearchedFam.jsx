@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../../css/viewmembers.css";
+import { generateTablePdf, downloadCsv } from "../../utils/pdfExport";
+import { api } from "../../api";
 
 const SearchedFam = () => {
   const location = useLocation();
@@ -12,9 +14,8 @@ const SearchedFam = () => {
   useEffect(() => {
     if (!family_number) return;
 
-    fetch(`http://localhost:8080/api/members?family_number=${family_number}`)
-      .then((res) => res.json())
-      .then((data) => setMembers(data))
+    api.get(`/members?family_number=${family_number}`)
+      .then(({ data }) => setMembers(data))
       .catch((err) => {
         console.error("Error fetching members:", err);
         setError("Could not load members");
@@ -28,7 +29,100 @@ const SearchedFam = () => {
 
   return (
     <div className="member-table-container1">
-      <h2>Family Members ({family_number})</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+        <h2>Family Members ({family_number})</h2>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            type="button"
+            onClick={() => {
+              const columns = [
+                { key: "slNo", header: "Sl No" },
+                { key: "name", header: "Name" },
+                { key: "gender", header: "Gender" },
+                { key: "relation", header: "Relation" },
+                { key: "dob", header: "DOB" },
+                { key: "age", header: "Age" },
+                { key: "occupation", header: "Occupation" },
+                { key: "phone", header: "Phone" },
+                { key: "email", header: "Email" },
+                { key: "bloodGroup", header: "Blood Group" },
+                { key: "aadhaar", header: "Aadhaar" },
+                { key: "hof", header: "HoF" },
+                { key: "baptism", header: "Baptism" },
+              ];
+              const rows = members.map((member, index) => ({
+                slNo: index + 1,
+                name: member.name,
+                gender: member.gender,
+                relation: member.relation || "",
+                dob: member.dob ? new Date(member.dob).toLocaleDateString() : "",
+                age: member.age || "",
+                occupation: member.occupation || "",
+                phone: member.phone || "",
+                email: member.email || "",
+                bloodGroup: member.blood_group || "",
+                aadhaar: member.aadhaar || "",
+                hof: member.hof ? "Yes" : "No",
+                baptism: member.baptism ? "Yes" : "No",
+              }));
+              generateTablePdf({
+                title: `Family Members - ${family_number}`,
+                columns,
+                rows,
+                fileName: `family_${family_number}_members.pdf`,
+              });
+            }}
+            className="submit-btn"
+          >
+            Download PDF
+          </button>
+
+          <button
+            type="button"
+            className="submit-btn"
+            style={{ background: "#2e7d32" }}
+            onClick={() => {
+              const columns = [
+                { key: "slNo", header: "Sl No" },
+                { key: "name", header: "Name" },
+                { key: "gender", header: "Gender" },
+                { key: "relation", header: "Relation" },
+                { key: "dob", header: "DOB" },
+                { key: "age", header: "Age" },
+                { key: "occupation", header: "Occupation" },
+                { key: "phone", header: "Phone" },
+                { key: "email", header: "Email" },
+                { key: "bloodGroup", header: "Blood Group" },
+                { key: "aadhaar", header: "Aadhaar" },
+                { key: "hof", header: "HoF" },
+                { key: "baptism", header: "Baptism" },
+              ];
+              const rows = members.map((member, index) => ({
+                slNo: index + 1,
+                name: member.name,
+                gender: member.gender,
+                relation: member.relation || "",
+                dob: member.dob ? new Date(member.dob).toLocaleDateString() : "",
+                age: member.age || "",
+                occupation: member.occupation || "",
+                phone: member.phone || "",
+                email: member.email || "",
+                bloodGroup: member.blood_group || "",
+                aadhaar: member.aadhaar || "",
+                hof: member.hof ? "Yes" : "No",
+                baptism: member.baptism ? "Yes" : "No",
+              }));
+              downloadCsv({
+                columns,
+                rows,
+                fileName: `family_${family_number}_members.csv`,
+              });
+            }}
+          >
+            Download CSV
+          </button>
+        </div>
+      </div>
       {error && <div style={{ color: "red", padding: "8px" }}>{error}</div>}
 
       <div className="table-wrapper1">

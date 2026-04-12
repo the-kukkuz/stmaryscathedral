@@ -6,26 +6,41 @@ const BaptismSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
-  // Family Information
+  reg_no: {
+    type: String,
+  },
+
+  // 🔑 Key switch
+  isParishioner: {
+    type: Boolean,
+    required: true,
+  },
+
+  // -------------------
+  // Family Information (Parishioner only)
+  // -------------------
   family_number: {
     type: String,
-    required: true,
-    ref: 'Family'
+    ref: "Family",
   },
   family_name: {
     type: String,
-    required: true,
   },
   hof: {
     type: String,
-    required: true,
   },
-  // Member Information
+
+  // -------------------
+  // Member Information (Parishioner only)
+  // -------------------
   member_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Member',
-    required: true
+    ref: "Member",
   },
+
+  // -------------------
+  // Person Information (Common)
+  // -------------------
   member_name: {
     type: String,
     required: true,
@@ -39,7 +54,30 @@ const BaptismSchema = new mongoose.Schema({
     enum: ["Male", "Female"],
     required: true,
   },
+
+  // -------------------
+  // Non-Parishioner Info
+  // -------------------
+  home_parish: {
+    type: String,
+  },
+
+  // -------------------
+  // Certificate Fields (matching certificate order)
+  // -------------------
+  address: {
+    type: String,
+  },
+  father_name: {
+    type: String,
+  },
+  mother_name: {
+    type: String,
+  },
+
+  // -------------------
   // Baptism Details
+  // -------------------
   date_of_baptism: {
     type: Date,
     required: true,
@@ -54,24 +92,34 @@ const BaptismSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+
+  // -------------------
   // Godparent Information
+  // -------------------
   godparent_name: {
     type: String,
   },
   godparent_house_name: {
     type: String,
   },
-  // Certificate Details
+
+  // -------------------
+  // Officiant
+  // -------------------
+  baptised_by: {
+    type: String,
+  },
+
+  // -------------------
+  // Certificate & Remarks
+  // -------------------
   certificate_number: {
     type: String,
   },
   remarks: {
     type: String,
   }
-}, { timestamps: true });
 
-// IMPORTANT: If updating existing schema, drop the collection first or use:
-// db.baptismrecords.drop()
-// Then restart your server
+}, { timestamps: true });
 
 export default mongoose.model("BaptismRecord", BaptismSchema);

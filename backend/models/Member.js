@@ -10,7 +10,9 @@ const memberSchema = new mongoose.Schema({
   occupation: { type: String },
   phone: { type: String },
   email: { type: String },
-  blog_group: { type: String },
+
+  blood_group: { type: String }, 
+
   aadhaar: { type: String },
   family_number: { type: String, required: true },
   hof: { type: Boolean, default: false },

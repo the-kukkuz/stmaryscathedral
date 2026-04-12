@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import "../../css/viewmarriage.css";
+import { generateTablePdf, generateMarriageCertificatePdf, downloadCsv } from "../../utils/pdfExport";
+import { api } from "../../api";
 
 const ViewMarriage = () => {
   const [marriages, setMarriages] = useState([]);
@@ -11,13 +13,11 @@ const ViewMarriage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState({});
-  const [stats, setStats] = useState({
-    totalMarriages: 0,
-    marriagesThisYear: 0,
-    marriagesByYear: []
-  });
+  const [saving, setSaving] = useState(false);
+  const [stats, setStats] = useState({ totalMarriages: 0, marriagesThisYear: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const ROWS_PER_PAGE = 10;
 
-  // Fetch all marriages and stats
   useEffect(() => {
     fetchMarriages();
     fetchStats();
@@ -26,8 +26,7 @@ const ViewMarriage = () => {
   const fetchMarriages = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:8080/api/marriages");
-      const data = await res.json();
+      const { data } = await api.get("/marriages");
       setMarriages(data);
       setFilteredMarriages(data);
     } catch (err) {
@@ -40,124 +39,104 @@ const ViewMarriage = () => {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/marriages/stats/overview");
-      const data = await res.json();
+      const { data } = await api.get("/marriages/stats/overview");
       setStats(data);
     } catch (err) {
       console.error("Error fetching stats:", err);
     }
   };
 
-  // Filter marriages based on search and year
+  /* SEARCH + YEAR FILTER */
   useEffect(() => {
     let filtered = marriages;
-
-    // Search filter
-    if (searchQuery.trim() !== "") {
-      filtered = filtered.filter(
-        (m) =>
-          m.spouse1.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          m.spouse2.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          m.marriage_id.toLowerCase().includes(searchQuery.toLowerCase())
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((m) =>
+        (m.spouse1_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.spouse2_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.reg_no || "").toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-
-    // Year filter
     if (filterYear) {
-      filtered = filtered.filter((m) => {
-        const year = new Date(m.date).getFullYear();
-        return year.toString() === filterYear;
-      });
+      filtered = filtered.filter((m) =>
+        new Date(m.date).getFullYear().toString() === filterYear
+      );
     }
-
     setFilteredMarriages(filtered);
+    setCurrentPage(1);
   }, [searchQuery, filterYear, marriages]);
 
-  // Format date
+  const totalPages = Math.max(1, Math.ceil(filteredMarriages.length / ROWS_PER_PAGE));
+  const paginatedMarriages = filteredMarriages.slice((currentPage - 1) * ROWS_PER_PAGE, currentPage * ROWS_PER_PAGE);
+
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "2-digit", month: "short", year: "numeric"
     });
   };
 
-  // Get unique years from marriages
   const getYears = () => {
     const years = marriages.map((m) => new Date(m.date).getFullYear());
     return [...new Set(years)].sort((a, b) => b - a);
   };
 
-  // View marriage details
+  /* VIEW */
   const handleView = (marriage) => {
     setSelectedMarriage(marriage);
-    setShowModal(true);
     setEditMode(false);
+    setShowModal(true);
   };
 
-  // Edit marriage
+  /* OPEN EDIT MODAL */
   const handleEdit = (marriage) => {
     setSelectedMarriage(marriage);
     setEditData({
-      marriage_id: marriage.marriage_id,
-      date: marriage.date.split('T')[0],
+      date: marriage.date ? marriage.date.split("T")[0] : "",
       place: marriage.place || "",
-      officiant_number: marriage.officiant_number || ""
+      solemnized_by: marriage.solemnized_by || "",
+      spouse1_name: marriage.spouse1_name || "",
+      spouse2_name: marriage.spouse2_name || "",
+      spouse1_isParishioner: marriage.spouse1_isParishioner !== false,
+      spouse2_isParishioner: marriage.spouse2_isParishioner !== false,
+      remarks: marriage.remarks || "",
     });
     setEditMode(true);
     setShowModal(true);
   };
 
-  // Update marriage
-  const handleUpdate = async (e) => {
-    e.preventDefault();
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  /* SAVE */
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      const res = await fetch(
-        `http://localhost:8080/api/marriages/${selectedMarriage._id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(editData)
-        }
-      );
-
-      if (!res.ok) throw new Error("Failed to update marriage");
-
+      await api.put(`/marriages/${selectedMarriage._id}`, editData);
       alert("✅ Marriage updated successfully!");
-      setShowModal(false);
-      setEditMode(false);
+      closeModal();
       fetchMarriages();
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("❌ Error updating marriage");
+    } finally {
+      setSaving(false);
     }
   };
 
-  // Delete marriage
+  /* DELETE */
   const handleDelete = async (id) => {
-    if (!window.confirm("⚠️ Are you sure you want to delete this marriage record?")) {
-      return;
-    }
-
+    if (!window.confirm("Are you sure you want to delete this marriage record?")) return;
     try {
-      const res = await fetch(`http://localhost:8080/api/marriages/${id}`, {
-        method: "DELETE"
-      });
-
-      if (!res.ok) throw new Error("Failed to delete marriage");
-
+      await api.delete(`/marriages/${id}`);
       alert("✅ Marriage deleted successfully!");
       fetchMarriages();
       fetchStats();
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("❌ Error deleting marriage");
     }
   };
 
-  // Close modal
   const closeModal = () => {
     setShowModal(false);
     setEditMode(false);
@@ -167,9 +146,23 @@ const ViewMarriage = () => {
 
   return (
     <div className="view-marriage-container">
-      {/* Header with Stats */}
+
+      {/* SEARCH */}
+      <div className="marriage-search">
+        <input
+          type="text"
+          placeholder="🔍 Search by name or reg no..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="input"
+        />
+      </div>
+
+      {/* HEADER */}
       <div className="marriage-header">
-        <h1>Marriage Records</h1>
+        <h2>Marriage Records ({filteredMarriages.length})</h2>
+
+        {/* Stats */}
         <div className="marriage-stats">
           <div className="stat-card">
             <div className="stat-number">{stats.totalMarriages}</div>
@@ -180,53 +173,102 @@ const ViewMarriage = () => {
             <div className="stat-label">This Year</div>
           </div>
         </div>
-      </div>
 
-      {/* Filters */}
-      <div className="marriage-filters">
-        <div className="filter-group">
-          <input
-            type="text"
-            placeholder="Search by name or marriage ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="filter-input"
-          />
-        </div>
-        <div className="filter-group">
+        {/* Buttons + year filter */}
+        <div className="marriage-header-buttons">
           <select
             value={filterYear}
             onChange={(e) => setFilterYear(e.target.value)}
-            className="filter-select"
+            className="marriage-year-select"
           >
             <option value="">All Years</option>
             {getYears().map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
+              <option key={year} value={year}>{year}</option>
             ))}
           </select>
+
+          <button
+            onClick={() => { setSearchQuery(""); setFilterYear(""); }}
+            className="submit-btn"
+          >
+            Clear Filters
+          </button>
+
+          <button onClick={fetchMarriages} className="submit-btn">
+            🔄 Refresh
+          </button>
+
+          <button
+            type="button"
+            className="submit-btn"
+            style={{ background: "#8b5e3c" }}
+            onClick={() => {
+              const columns = [
+                { key: "regNo", header: "Reg.No." },
+                { key: "groom", header: "Groom" },
+                { key: "groomStatus", header: "Groom Status" },
+                { key: "bride", header: "Bride" },
+                { key: "brideStatus", header: "Bride Status" },
+                { key: "date", header: "Date" },
+                { key: "place", header: "Place" },
+              ];
+              const rows = filteredMarriages.map((m) => ({
+                regNo: m.reg_no || "-",
+                groom: m.spouse1_name,
+                groomStatus: m.spouse1_isParishioner !== false ? "Parishioner" : "Non-Parishioner",
+                bride: m.spouse2_name,
+                brideStatus: m.spouse2_isParishioner !== false ? "Parishioner" : "Non-Parishioner",
+                date: formatDate(m.date),
+                place: m.place || "N/A",
+              }));
+              generateTablePdf({ title: "Marriage Records", columns, rows, fileName: "marriage_records.pdf" });
+            }}
+          >
+            Download PDF
+          </button>
+
+          <button
+            type="button"
+            className="submit-btn"
+            style={{ background: "#2e7d32" }}
+            onClick={() => {
+              const columns = [
+                { key: "regNo", header: "Reg.No." },
+                { key: "groom", header: "Groom" },
+                { key: "groomStatus", header: "Groom Status" },
+                { key: "bride", header: "Bride" },
+                { key: "brideStatus", header: "Bride Status" },
+                { key: "date", header: "Date" },
+                { key: "place", header: "Place" },
+                { key: "solemnizedBy", header: "Solemnized By" },
+              ];
+              const rows = filteredMarriages.map((m) => ({
+                regNo: m.reg_no || "-",
+                groom: m.spouse1_name,
+                groomStatus: m.spouse1_isParishioner !== false ? "Parishioner" : "Non-Parishioner",
+                bride: m.spouse2_name,
+                brideStatus: m.spouse2_isParishioner !== false ? "Parishioner" : "Non-Parishioner",
+                date: formatDate(m.date),
+                place: m.place || "-",
+                solemnizedBy: m.solemnized_by || "-",
+              }));
+              downloadCsv({ columns, rows, fileName: "marriage_records.csv" });
+            }}
+          >
+            Download CSV
+          </button>
         </div>
-        <button
-          onClick={() => {
-            setSearchQuery("");
-            setFilterYear("");
-          }}
-          className="clear-filters-btn"
-        >
-          Clear Filters
-        </button>
       </div>
 
-      {/* Marriage Table */}
+      {/* TABLE */}
       {loading ? (
-        <div className="loading">Loading marriages...</div>
+        <div className="loading-box">Loading marriage records...</div>
       ) : (
-        <div className="marriage-table-wrapper">
+        <div className="table-wrapper1">
           <table className="view-marriage-table">
             <thead>
               <tr>
-                <th>Marriage ID</th>
+                <th>Reg.No.</th>
                 <th>Groom</th>
                 <th>Bride</th>
                 <th>Date</th>
@@ -235,35 +277,47 @@ const ViewMarriage = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredMarriages.length > 0 ? (
-                filteredMarriages.map((marriage) => (
+              {paginatedMarriages.length > 0 ? (
+                paginatedMarriages.map((marriage, index) => (
                   <tr key={marriage._id}>
-                    <td>{marriage.marriage_id}</td>
-                    <td>{marriage.spouse1}</td>
-                    <td>{marriage.spouse2}</td>
+                    <td>{marriage.reg_no || "-"}</td>
+                    <td>
+                      {marriage.spouse1_name}
+                      <small>{marriage.spouse1_isParishioner !== false ? "Parishioner" : "Non-Parishioner"}</small>
+                    </td>
+                    <td>
+                      {marriage.spouse2_name}
+                      <small>{marriage.spouse2_isParishioner !== false ? "Parishioner" : "Non-Parishioner"}</small>
+                    </td>
                     <td>{formatDate(marriage.date)}</td>
                     <td>{marriage.place || "N/A"}</td>
-                    <td className="action-buttons">
+                    <td className="actions-cell">
                       <button
                         onClick={() => handleView(marriage)}
-                        className="btn-view"
-                        title="View Details"
+                        className="submit-btn"
+                        style={{ background: "#4caf50" }}
                       >
-                        👁️
+                        👁️ View
                       </button>
                       <button
                         onClick={() => handleEdit(marriage)}
-                        className="btn-edit"
-                        title="Edit"
+                        className="submit-btn"
+                        style={{ background: "#f39c12" }}
                       >
-                        ✏️
+                        Edit
                       </button>
                       <button
                         onClick={() => handleDelete(marriage._id)}
-                        className="btn-delete"
-                        title="Delete"
+                        className="submit-btn"
+                        style={{ background: "#e74c3c" }}
                       >
-                        🗑️
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => generateMarriageCertificatePdf(marriage)}
+                        className="submit-btn"
+                      >
+                        Certificate
                       </button>
                     </td>
                   </tr>
@@ -282,147 +336,138 @@ const ViewMarriage = () => {
         </div>
       )}
 
-      {/* Modal for View/Edit */}
+      {/* Pagination */}
+      <div className="pagination">
+        <button className="pagination-btn" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>← Prev</button>
+        <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+        <button className="pagination-btn" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Next →</button>
+      </div>
+      {/* MODAL — VIEW / EDIT */}
       {showModal && selectedMarriage && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={closeModal}>
-              ×
-            </button>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
 
-            {editMode ? (
-              // Edit Form
-              <form onSubmit={handleUpdate}>
-                <h2>Edit Marriage Record</h2>
-                
-                <div className="modal-section">
-                  <h3>Couple Information</h3>
-                  <div className="info-row">
-                    <strong>Groom:</strong> {selectedMarriage.spouse1}
-                  </div>
-                  <div className="info-row">
-                    <strong>Bride:</strong> {selectedMarriage.spouse2}
-                  </div>
-                </div>
+            <div className="modal-header">
+              <h3>{editMode ? "✏️ Edit Marriage Record" : "👁️ View Marriage Record"}</h3>
+              <button className="modal-close" onClick={closeModal}>✕</button>
+            </div>
 
-                <div className="modal-section">
-                  <h3>Marriage Details</h3>
-                  <div className="form-group">
-                    <label>Marriage ID</label>
-                    <input
-                      type="text"
-                      value={editData.marriage_id}
-                      onChange={(e) =>
-                        setEditData({ ...editData, marriage_id: e.target.value })
-                      }
-                      required
-                    />
+            <div className="modal-body">
+              {editMode ? (
+                /* ── EDIT ── */
+                <>
+                  <div className="modal-section-title">Couple Information</div>
+                  <div className="modal-grid">
+                    <div className="modal-field">
+                      <label>Groom Name</label>
+                      <input name="spouse1_name" value={editData.spouse1_name} onChange={handleEditChange} />
+                    </div>
+                    <div className="modal-field">
+                      <label>Groom Status</label>
+                      <select
+                        name="spouse1_isParishioner"
+                        value={editData.spouse1_isParishioner}
+                        onChange={(e) => setEditData((p) => ({ ...p, spouse1_isParishioner: e.target.value === "true" }))}
+                      >
+                        <option value="true">Parishioner</option>
+                        <option value="false">Non-Parishioner</option>
+                      </select>
+                    </div>
+                    <div className="modal-field">
+                      <label>Bride Name</label>
+                      <input name="spouse2_name" value={editData.spouse2_name} onChange={handleEditChange} />
+                    </div>
+                    <div className="modal-field">
+                      <label>Bride Status</label>
+                      <select
+                        name="spouse2_isParishioner"
+                        value={editData.spouse2_isParishioner}
+                        onChange={(e) => setEditData((p) => ({ ...p, spouse2_isParishioner: e.target.value === "true" }))}
+                      >
+                        <option value="true">Parishioner</option>
+                        <option value="false">Non-Parishioner</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label>Date</label>
-                    <input
-                      type="date"
-                      value={editData.date}
-                      onChange={(e) =>
-                        setEditData({ ...editData, date: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Place</label>
-                    <input
-                      type="text"
-                      value={editData.place}
-                      onChange={(e) =>
-                        setEditData({ ...editData, place: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Officiant Number</label>
-                    <input
-                      type="text"
-                      value={editData.officiant_number}
-                      onChange={(e) =>
-                        setEditData({ ...editData, officiant_number: e.target.value })
-                      }
-                    />
-                  </div>
-                </div>
 
-                <div className="modal-actions">
-                  <button type="submit" className="btn-save">
-                    Save Changes
-                  </button>
-                  <button type="button" onClick={closeModal} className="btn-cancel">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              // View Details
-              <div>
-                <h2>Marriage Details</h2>
-                
-                <div className="modal-section">
-                  <h3>Marriage Information</h3>
-                  <div className="info-row">
-                    <strong>Marriage ID:</strong> {selectedMarriage.marriage_id}
+                  <div className="modal-section-title">Marriage Details</div>
+                  <div className="modal-grid">
+                    <div className="modal-field">
+                      <label>Date of Marriage</label>
+                      <input type="date" name="date" value={editData.date} onChange={handleEditChange} />
+                    </div>
+                    <div className="modal-field">
+                      <label>Place of Marriage</label>
+                      <input name="place" value={editData.place} onChange={handleEditChange} />
+                    </div>
+                    <div className="modal-field">
+                      <label>Solemnized By</label>
+                      <input name="solemnized_by" value={editData.solemnized_by} onChange={handleEditChange} />
+                    </div>
                   </div>
-                  <div className="info-row">
-                    <strong>Date:</strong> {formatDate(selectedMarriage.date)}
-                  </div>
-                  <div className="info-row">
-                    <strong>Place:</strong> {selectedMarriage.place || "N/A"}
-                  </div>
-                  <div className="info-row">
-                    <strong>Officiant Number:</strong>{" "}
-                    {selectedMarriage.officiant_number || "N/A"}
-                  </div>
-                </div>
 
-                <div className="modal-section">
-                  <h3>Couple Information</h3>
-                  <div className="couple-details">
+                  <div className="modal-section-title">Other</div>
+                  <div className="modal-grid">
+                    <div className="modal-field modal-field-full">
+                      <label>Remarks</label>
+                      <textarea name="remarks" value={editData.remarks} onChange={handleEditChange} rows={3} />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* ── VIEW ── */
+                <>
+                  <div className="modal-section-title">Marriage Information</div>
+                  <div className="modal-info-row"><strong>Reg.No.:</strong> {selectedMarriage.reg_no || "N/A"}</div>
+                  <div className="modal-info-row"><strong>Date of Marriage:</strong> {formatDate(selectedMarriage.date)}</div>
+                  <div className="modal-info-row"><strong>Place of Marriage:</strong> {selectedMarriage.place || "N/A"}</div>
+                  <div className="modal-info-row"><strong>Solemnized By:</strong> {selectedMarriage.solemnized_by || "N/A"}</div>
+
+                  <div className="modal-section-title">Couple Information</div>
+                  <div className="modal-couple-grid">
                     <div className="spouse-card">
                       <h4>Groom</h4>
-                      <p><strong>Name:</strong> {selectedMarriage.spouse1}</p>
-                      {selectedMarriage.spouse1_id?.phone && (
-                        <p><strong>Phone:</strong> {selectedMarriage.spouse1_id.phone}</p>
-                      )}
-                      {selectedMarriage.spouse1_id?.family_number && (
-                        <p><strong>Family:</strong> {selectedMarriage.spouse1_id.family_number}</p>
-                      )}
+                      <p><strong>Name:</strong> {selectedMarriage.spouse1_name}</p>
+                      <p><strong>Status:</strong> {selectedMarriage.spouse1_isParishioner !== false ? "Parishioner" : "Non-Parishioner"}</p>
+                      {selectedMarriage.spouse1_id?.phone && <p><strong>Phone:</strong> {selectedMarriage.spouse1_id.phone}</p>}
+                      {selectedMarriage.spouse1_id?.family_number && <p><strong>Family:</strong> {selectedMarriage.spouse1_id.family_number}</p>}
                     </div>
                     <div className="spouse-card">
                       <h4>Bride</h4>
-                      <p><strong>Name:</strong> {selectedMarriage.spouse2}</p>
-                      {selectedMarriage.spouse2_id?.phone && (
-                        <p><strong>Phone:</strong> {selectedMarriage.spouse2_id.phone}</p>
-                      )}
-                      {selectedMarriage.spouse2_id?.family_number && (
-                        <p><strong>Family:</strong> {selectedMarriage.spouse2_id.family_number}</p>
-                      )}
+                      <p><strong>Name:</strong> {selectedMarriage.spouse2_name}</p>
+                      <p><strong>Status:</strong> {selectedMarriage.spouse2_isParishioner !== false ? "Parishioner" : "Non-Parishioner"}</p>
+                      {selectedMarriage.spouse2_id?.phone && <p><strong>Phone:</strong> {selectedMarriage.spouse2_id.phone}</p>}
+                      {selectedMarriage.spouse2_id?.family_number && <p><strong>Family:</strong> {selectedMarriage.spouse2_id.family_number}</p>}
                     </div>
                   </div>
-                </div>
 
-                <div className="modal-section">
-                  <div className="info-row">
-                    <strong>Record Created:</strong>{" "}
-                    {formatDate(selectedMarriage.createdAt)}
-                  </div>
-                  <div className="info-row">
-                    <strong>Last Updated:</strong>{" "}
-                    {formatDate(selectedMarriage.updatedAt)}
-                  </div>
-                </div>
-              </div>
-            )}
+                  <div className="modal-section-title">Record Info</div>
+                  <div className="modal-info-row"><strong>Created:</strong> {formatDate(selectedMarriage.createdAt)}</div>
+                  <div className="modal-info-row"><strong>Last Updated:</strong> {formatDate(selectedMarriage.updatedAt)}</div>
+                </>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button className="submit-btn" style={{ background: "#aaa" }} onClick={closeModal}>
+                Cancel
+              </button>
+              {editMode && (
+                <button className="submit-btn" style={{ background: "#4caf50" }} onClick={handleSave} disabled={saving}>
+                  {saving ? "Saving..." : "💾 Save Changes"}
+                </button>
+              )}
+              {!editMode && (
+                <button className="submit-btn" style={{ background: "#f39c12" }} onClick={() => setEditMode(true)}>
+                  ✏️ Edit
+                </button>
+              )}
+            </div>
+
           </div>
         </div>
       )}
+
     </div>
   );
 };
