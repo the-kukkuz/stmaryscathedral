@@ -53,6 +53,7 @@ const ExistingFamilymem = () => {
     try {
       if (!familyNumber) return;
 <<<<<<< HEAD
+<<<<<<< HEAD
       const { data } = await api.get(`/families/number/${familyNumber}`);
 =======
       const res = await fetch(
@@ -61,6 +62,9 @@ const ExistingFamilymem = () => {
       if (!res.ok) throw new Error("Family not found");
       const data = await res.json();
 >>>>>>> 5e2b8a1 (railway config)
+=======
+      const { data } = await api.get(`/families/number/${familyNumber}`);
+>>>>>>> 98f619a (fixes)
       setFamilyInfo({
         name: data.name || "",
         hof: data.hof || "",
@@ -141,6 +145,7 @@ const ExistingFamilymem = () => {
       };
 
 <<<<<<< HEAD
+<<<<<<< HEAD
       await api.post("/members", payload);
 =======
       const res = await fetch("/api/members", {
@@ -154,6 +159,9 @@ const ExistingFamilymem = () => {
         throw new Error(errData.error || "Failed to add member");
       }
 >>>>>>> 5e2b8a1 (railway config)
+=======
+      await api.post("/members", payload);
+>>>>>>> 98f619a (fixes)
 
       alert("✅ Member added successfully!");
       

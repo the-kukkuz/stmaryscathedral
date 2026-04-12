@@ -80,6 +80,7 @@ const AddDeathRecord = () => {
   // Fetch families on mount
   useEffect(() => {
 <<<<<<< HEAD
+<<<<<<< HEAD
     api.get("/families")
       .then(({ data }) => setFamilies(data))
 =======
@@ -87,6 +88,10 @@ const AddDeathRecord = () => {
       .then((res) => res.json())
       .then((data) => setFamilies(data))
 >>>>>>> 5e2b8a1 (railway config)
+=======
+    api.get("/families")
+      .then(({ data }) => setFamilies(data))
+>>>>>>> 98f619a (fixes)
       .catch((err) => console.error("Error fetching families:", err));
   }, []);
 
@@ -110,6 +115,7 @@ const AddDeathRecord = () => {
   useEffect(() => {
     if (selectedHof && selectedFamily) {
 <<<<<<< HEAD
+<<<<<<< HEAD
       api.get(`/members?family_number=${selectedFamily.family_number}`)
         .then(({ data }) => setMembers(data))
 =======
@@ -119,6 +125,10 @@ const AddDeathRecord = () => {
         .then((res) => res.json())
         .then((data) => setMembers(data))
 >>>>>>> 5e2b8a1 (railway config)
+=======
+      api.get(`/members?family_number=${selectedFamily.family_number}`)
+        .then(({ data }) => setMembers(data))
+>>>>>>> 98f619a (fixes)
         .catch((err) => console.error("Error fetching members:", err));
     }
   }, [selectedHof, selectedFamily]);
@@ -240,6 +250,7 @@ const AddDeathRecord = () => {
 
     try {
 <<<<<<< HEAD
+<<<<<<< HEAD
       const { data } = await api.post("/deaths", payload);
 =======
       const res = await fetch("/api/deaths", {
@@ -254,6 +265,9 @@ const AddDeathRecord = () => {
         throw new Error(data.error || "Failed to add death record");
       }
 >>>>>>> 5e2b8a1 (railway config)
+=======
+      const { data } = await api.post("/deaths", payload);
+>>>>>>> 98f619a (fixes)
 
       alert("✅ Death record added successfully!");
       setSavedRecord(data.death);

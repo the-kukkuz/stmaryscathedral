@@ -113,10 +113,14 @@ const AddFamily = () => {
       const API = import.meta.env.VITE_API_URL;
       await axios.post(
 <<<<<<< HEAD
+<<<<<<< HEAD
         `${API}/api/families`,
 =======
         "/api/families",
 >>>>>>> 5e2b8a1 (railway config)
+=======
+        `${API}/api/families`,
+>>>>>>> 98f619a (fixes)
         form
       );
 

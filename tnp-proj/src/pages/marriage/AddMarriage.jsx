@@ -30,11 +30,7 @@ const AddMarriage = () => {
   const [manualGroomMotherName, setManualGroomMotherName] = useState("");
   const [manualBrideMotherName, setManualBrideMotherName] = useState("");
 
-  // State to store fetched family data for auto-filling
-  const [groomFamilyData, setGroomFamilyData] = useState(null);
-  const [groomFamilyMembers, setGroomFamilyMembers] = useState([]);
-  const [brideFamilyData, setBrideFamilyData] = useState(null);
-  const [brideFamilyMembers, setBrideFamilyMembers] = useState([]);
+
 
 
   const [marriageData, setMarriageData] = useState({
@@ -48,6 +44,7 @@ const AddMarriage = () => {
   // Fetch all members on component mount
   useEffect(() => {
 <<<<<<< HEAD
+<<<<<<< HEAD
     api.get('/members')
       .then(({ data }) => {
 =======
@@ -55,6 +52,10 @@ const AddMarriage = () => {
       .then((res) => res.json())
       .then((data) => {
 >>>>>>> 5e2b8a1 (railway config)
+=======
+    api.get('/members')
+      .then(({ data }) => {
+>>>>>>> 98f619a (fixes)
         // Filter out deceased members
         const activeMembers = data.filter(member => !member.deceased);
         setAllMembers(activeMembers);
@@ -99,13 +100,12 @@ const AddMarriage = () => {
       api.get(`/families/number/${selectedGroom.family_number}`)
         .then(({ data: family }) => {
           fetchedFamily = family;
-          setGroomFamilyData(family);
+          fetchedFamily = family;
           
           // Fetch all family members
           return api.get(`/members?family_number=${selectedGroom.family_number}`);
         })
         .then(({ data: members }) => {
-          setGroomFamilyMembers(members);
           
           // Build address and infer parent names
           const address = buildAddress(fetchedFamily || {});
@@ -146,13 +146,12 @@ const AddMarriage = () => {
       api.get(`/families/number/${selectedBride.family_number}`)
         .then(({ data: family }) => {
           fetchedFamily = family;
-          setBrideFamilyData(family);
+          fetchedFamily = family;
           
           // Fetch all family members
           return api.get(`/members?family_number=${selectedBride.family_number}`);
         })
         .then(({ data: members }) => {
-          setBrideFamilyMembers(members);
           
           // Build address and infer parent names
           const address = buildAddress(fetchedFamily || {});
@@ -292,6 +291,7 @@ const AddMarriage = () => {
 
     try {
 <<<<<<< HEAD
+<<<<<<< HEAD
       const { data } = await api.post('/marriages', payload);
 =======
       const res = await fetch(
@@ -309,6 +309,9 @@ const AddMarriage = () => {
         throw new Error(data.error || "Failed to add marriage record");
       }
 >>>>>>> 5e2b8a1 (railway config)
+=======
+      const { data } = await api.post('/marriages', payload);
+>>>>>>> 98f619a (fixes)
 
       alert("✅ Marriage record added successfully!");
       setSavedRecord(data.marriage);

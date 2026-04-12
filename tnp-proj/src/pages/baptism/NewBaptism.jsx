@@ -94,6 +94,7 @@ const NewBaptism = () => {
     try {
       setSearchLoading(true);
 <<<<<<< HEAD
+<<<<<<< HEAD
       const { data } = await api.get(`/baptisms/search-families/${familySearch}`);
 =======
       console.log("Searching for:", familySearch); // Debug
@@ -108,6 +109,9 @@ const NewBaptism = () => {
       console.log("Search results:", data); // Debug
 
 >>>>>>> 5e2b8a1 (railway config)
+=======
+      const { data } = await api.get(`/baptisms/search-families/${familySearch}`);
+>>>>>>> 98f619a (fixes)
       // Get unique family names
       const uniqueFamilies = [...new Set(data.map(f => f.name))];
       setFamilyResults(uniqueFamilies);
@@ -121,11 +125,15 @@ const NewBaptism = () => {
   const fetchHeadsOfFamily = async () => {
     try {
 <<<<<<< HEAD
+<<<<<<< HEAD
       const { data } = await api.get(`/baptisms/heads-of-family/${selectedFamilyName}`);
 =======
       const res = await fetch(`/api/baptisms/heads-of-family/${selectedFamilyName}`);
       const data = await res.json();
 >>>>>>> 5e2b8a1 (railway config)
+=======
+      const { data } = await api.get(`/baptisms/heads-of-family/${selectedFamilyName}`);
+>>>>>>> 98f619a (fixes)
       setHeadsOfFamily(data);
 
       // Reset subsequent selections
@@ -142,6 +150,7 @@ const NewBaptism = () => {
   const fetchUnbaptizedMembers = async (familyNumber) => {
     try {
 <<<<<<< HEAD
+<<<<<<< HEAD
       const { data } = await api.get(`/baptisms/unbaptized-members/${familyNumber}`);
 =======
       console.log("Fetching unbaptized members for family:", familyNumber);
@@ -157,6 +166,9 @@ const NewBaptism = () => {
       console.log("Number of unbaptized members:", data.length);
 
 >>>>>>> 5e2b8a1 (railway config)
+=======
+      const { data } = await api.get(`/baptisms/unbaptized-members/${familyNumber}`);
+>>>>>>> 98f619a (fixes)
       setUnbaptizedMembers(data);
 
       // Reset member selection
@@ -244,6 +256,7 @@ const NewBaptism = () => {
       }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
       const { data } = await api.post('/baptisms', payload);
 =======
 
@@ -259,6 +272,9 @@ const NewBaptism = () => {
         throw new Error(data.error || 'Failed to add baptism record');
       }
 >>>>>>> 5e2b8a1 (railway config)
+=======
+      const { data } = await api.post('/baptisms', payload);
+>>>>>>> 98f619a (fixes)
 
       alert('✅ Baptism record added successfully!');
       setSavedRecord(data.data);

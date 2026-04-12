@@ -162,17 +162,19 @@ export const inferParentSpouseNames = (member, familyMembers = [], hofName = '')
       if (mother) result.motherName = mother.name || '';
       break;
       
-    case 'daughter-in-law':
+    case 'daughter-in-law': {
       // Daughter-in-law's spouse is a son
       const son = familyMembers.find(mem => normalizeRelation(mem.relation) === 'son');
       if (son) result.spouseName = son.name || '';
       break;
+    }
       
-    case 'son-in-law':
+    case 'son-in-law': {
       // Son-in-law's spouse is a daughter
       const daughter = familyMembers.find(mem => normalizeRelation(mem.relation) === 'daughter');
       if (daughter) result.spouseName = daughter.name || '';
       break;
+    }
       
     default:
       // For other relations, try to find basic father/mother if they exist

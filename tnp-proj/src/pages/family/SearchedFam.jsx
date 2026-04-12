@@ -15,6 +15,7 @@ const SearchedFam = () => {
     if (!family_number) return;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     api.get(`/members?family_number=${family_number}`)
       .then(({ data }) => setMembers(data))
 =======
@@ -22,6 +23,10 @@ const SearchedFam = () => {
       .then((res) => res.json())
       .then((data) => setMembers(data))
 >>>>>>> 5e2b8a1 (railway config)
+=======
+    api.get(`/members?family_number=${family_number}`)
+      .then(({ data }) => setMembers(data))
+>>>>>>> 98f619a (fixes)
       .catch((err) => {
         console.error("Error fetching members:", err);
         setError("Could not load members");
