@@ -278,7 +278,7 @@ const ViewMarriage = () => {
             </thead>
             <tbody>
               {paginatedMarriages.length > 0 ? (
-                paginatedMarriages.map((marriage, index) => (
+                paginatedMarriages.map((marriage) => (
                   <tr key={marriage._id}>
                     <td>{marriage.reg_no || "-"}</td>
                     <td>

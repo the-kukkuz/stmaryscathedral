@@ -313,13 +313,9 @@
     flex-wrap: wrap;
   }
 
-<<<<<<< HEAD
   .search,
   .input,
   .filter-input {
     width: 100%;
   }
 }
-=======
-}
->>>>>>> 5e2b8a1 (railway config)

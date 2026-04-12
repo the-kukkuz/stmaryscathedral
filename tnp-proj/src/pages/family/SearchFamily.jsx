@@ -66,19 +66,8 @@ const SearchFamily = () => {
 
   /* ================= FETCH DATA ================= */
   useEffect(() => {
-<<<<<<< HEAD
-<<<<<<< HEAD
     api.get("/families")
       .then(({ data }) => setFamilies(data))
-=======
-    fetch("/api/families")
-      .then((res) => res.json())
-      .then((data) => setFamilies(data))
->>>>>>> 5e2b8a1 (railway config)
-=======
-    api.get("/families")
-      .then(({ data }) => setFamilies(data))
->>>>>>> 98f619a (fixes)
       .catch((err) =>
         console.error("Error fetching families:", err)
       );

@@ -180,7 +180,7 @@ const SearchBap = () => {
                 { key: "certificateNumber", header: "Certificate No." },
                 { key: "remarks", header: "Remarks" },
               ];
-              const rows = filteredBaptisms.map((bap, index) => ({
+              const rows = filteredBaptisms.map((bap) => ({
                 regNo: bap.reg_no || "-",
                 familyNumber: bap.family_number,
                 familyName: bap.family_name,
@@ -281,7 +281,7 @@ const SearchBap = () => {
               </tr>
             </thead>
             <tbody>
-              {paginatedBaptisms.map((bap, index) => (
+              {paginatedBaptisms.map((bap) => (
                 <tr key={bap._id}>
                   <td>{bap.reg_no || "-"}</td>
                   <td>{bap.family_number}</td>

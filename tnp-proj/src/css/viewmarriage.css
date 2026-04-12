@@ -457,7 +457,6 @@
 }
 
 @media (max-width: 600px) {
-<<<<<<< HEAD
   .modal-grid {
     grid-template-columns: 1fr;
   }
@@ -474,10 +473,3 @@
     width: 100%;
   }
 }
-=======
-  .modal-grid { grid-template-columns: 1fr; }
-  .modal-couple-grid { grid-template-columns: 1fr; }
-  .modal-footer { flex-direction: column; }
-  .modal-footer .submit-btn { width: 100%; }
-}
->>>>>>> 5e2b8a1 (railway config)

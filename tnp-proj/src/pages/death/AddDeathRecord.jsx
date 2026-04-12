@@ -79,19 +79,8 @@ const AddDeathRecord = () => {
 
   // Fetch families on mount
   useEffect(() => {
-<<<<<<< HEAD
-<<<<<<< HEAD
     api.get("/families")
       .then(({ data }) => setFamilies(data))
-=======
-    fetch("/api/families")
-      .then((res) => res.json())
-      .then((data) => setFamilies(data))
->>>>>>> 5e2b8a1 (railway config)
-=======
-    api.get("/families")
-      .then(({ data }) => setFamilies(data))
->>>>>>> 98f619a (fixes)
       .catch((err) => console.error("Error fetching families:", err));
   }, []);
 
@@ -114,21 +103,8 @@ const AddDeathRecord = () => {
   // Fetch members when family selected
   useEffect(() => {
     if (selectedHof && selectedFamily) {
-<<<<<<< HEAD
-<<<<<<< HEAD
       api.get(`/members?family_number=${selectedFamily.family_number}`)
         .then(({ data }) => setMembers(data))
-=======
-      fetch(
-        `/api/members?family_number=${selectedFamily.family_number}`
-      )
-        .then((res) => res.json())
-        .then((data) => setMembers(data))
->>>>>>> 5e2b8a1 (railway config)
-=======
-      api.get(`/members?family_number=${selectedFamily.family_number}`)
-        .then(({ data }) => setMembers(data))
->>>>>>> 98f619a (fixes)
         .catch((err) => console.error("Error fetching members:", err));
     }
   }, [selectedHof, selectedFamily]);
@@ -249,25 +225,7 @@ const AddDeathRecord = () => {
     };
 
     try {
-<<<<<<< HEAD
-<<<<<<< HEAD
       const { data } = await api.post("/deaths", payload);
-=======
-      const res = await fetch("/api/deaths", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json(); // ✅ Get response data for better error handling
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to add death record");
-      }
->>>>>>> 5e2b8a1 (railway config)
-=======
-      const { data } = await api.post("/deaths", payload);
->>>>>>> 98f619a (fixes)
 
       alert("✅ Death record added successfully!");
       setSavedRecord(data.death);

@@ -73,19 +73,8 @@ const Subscription = () => {
 
   // Fetch all families on mount
   useEffect(() => {
-<<<<<<< HEAD
-<<<<<<< HEAD
     api.get("/families")
       .then(({ data }) => setFamilies(data))
-=======
-    fetch("/api/families")
-      .then((res) => res.json())
-      .then((data) => setFamilies(data))
->>>>>>> 5e2b8a1 (railway config)
-=======
-    api.get("/families")
-      .then(({ data }) => setFamilies(data))
->>>>>>> 98f619a (fixes)
       .catch((err) => console.error("Error fetching families:", err));
   }, []);
 
@@ -107,10 +96,6 @@ const Subscription = () => {
   const fetchSubscriptionData = useCallback(async (familyNumber) => {
     try {
       setLoading(true);
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 98f619a (fixes)
       const { data } = await api.get(`/subscriptions/family/${familyNumber}`);
 
         setSubscriptionRecords(data.records || []);
@@ -137,17 +122,6 @@ const Subscription = () => {
           .filter(r => !r.paid)
           .map(r => r.year);
         setMultiSelectedYears(unpaidYears);
-<<<<<<< HEAD
-=======
-      const res = await fetch(
-        `/api/subscriptions/family/${familyNumber}`
-      );
-      const data = await res.json();
-      setSubscriptionHistory(data);
-      calculateDues(data);
->>>>>>> 5e2b8a1 (railway config)
-=======
->>>>>>> 98f619a (fixes)
     } catch (err) {
       console.error("Error fetching subscription data:", err);
       setSubscriptionRecords([]);
@@ -193,25 +167,11 @@ const Subscription = () => {
     }
 
     try {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 98f619a (fixes)
       setChangingRate(true);
       const { data } = await api.put(
         `/families/${selectedFamily._id}/subscription-amount`,
         { subscription_amount: amount }
       );
-<<<<<<< HEAD
-=======
-      const res = await fetch("/api/subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
->>>>>>> 5e2b8a1 (railway config)
-=======
->>>>>>> 98f619a (fixes)
 
       alert(`✅ Subscription rate updated to ₹${amount}\n${data.unpaid_records_updated || 0} unpaid record(s) updated.`);
 
@@ -340,19 +300,7 @@ const Subscription = () => {
         notes: inlinePayForm.notes
       };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
       await api.post("/subscriptions", payload);
-=======
-      const res = await fetch(`/api/subscriptions/${subscription._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
->>>>>>> 5e2b8a1 (railway config)
-=======
-      await api.post("/subscriptions", payload);
->>>>>>> 98f619a (fixes)
 
       setPayingYear(null);
       fetchSubscriptionData(selectedFamily.family_number);

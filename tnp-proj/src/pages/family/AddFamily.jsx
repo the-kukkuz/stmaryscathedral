@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "../../css/addfamily.css";
+import { api } from "../../api";
 
 const AddFamily = () => {
 
@@ -110,19 +110,7 @@ const AddFamily = () => {
 
     try {
 
-      const API = import.meta.env.VITE_API_URL;
-      await axios.post(
-<<<<<<< HEAD
-<<<<<<< HEAD
-        `${API}/api/families`,
-=======
-        "/api/families",
->>>>>>> 5e2b8a1 (railway config)
-=======
-        `${API}/api/families`,
->>>>>>> 98f619a (fixes)
-        form
-      );
+      await api.post("/families", form);
 
       alert("Family added successfully");
 

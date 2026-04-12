@@ -28,19 +28,8 @@ const EditMember = () => {
 
   // ✅ Fetch all families on load
   useEffect(() => {
-<<<<<<< HEAD
-<<<<<<< HEAD
     api.get("/families")
       .then(({ data }) => setFamilies(data))
-=======
-    fetch("/api/families")
-      .then((res) => res.json())
-      .then((data) => setFamilies(data))
->>>>>>> 5e2b8a1 (railway config)
-=======
-    api.get("/families")
-      .then(({ data }) => setFamilies(data))
->>>>>>> 98f619a (fixes)
       .catch((err) => console.error("❌ Error fetching families:", err));
   }, []);
 
@@ -104,19 +93,7 @@ const EditMember = () => {
   // ✅ Fetch members for a family
   const fetchMembers = async (family_number) => {
     try {
-<<<<<<< HEAD
-<<<<<<< HEAD
       const { data } = await api.get(`/members?family_number=${family_number}`);
-=======
-      const res = await fetch(
-        `/api/members?family_number=${family_number}`
-      );
-      if (!res.ok) throw new Error("Failed to fetch members");
-      const data = await res.json();
->>>>>>> 5e2b8a1 (railway config)
-=======
-      const { data } = await api.get(`/members?family_number=${family_number}`);
->>>>>>> 98f619a (fixes)
       setMembers(data);
     } catch (err) {
       console.error(err);
@@ -184,24 +161,7 @@ const EditMember = () => {
         baptism: formData.baptismStatus === "Yes",
       };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
       await api.put(`/members/${selectedMember}`, payload);
-=======
-      const res = await fetch(
-        `/api/members/${selectedMember}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!res.ok) throw new Error("Failed to update member");
->>>>>>> 5e2b8a1 (railway config)
-=======
-      await api.put(`/members/${selectedMember}`, payload);
->>>>>>> 98f619a (fixes)
       alert("✅ Member updated successfully!");
     } catch (err) {
       alert(`❌ Error updating member: ${err.message}`);

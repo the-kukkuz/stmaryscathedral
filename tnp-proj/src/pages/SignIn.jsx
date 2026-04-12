@@ -51,7 +51,7 @@ const SignIn = () => {
       localStorage.setItem('token', data.token);
       localStorage.setItem('username', data.username || username);
       navigate('/');
-    } catch (err) {
+    } catch {
       setError('Invalid username or password');
       setLoading(false);
     }

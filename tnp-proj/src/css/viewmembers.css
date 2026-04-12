@@ -130,7 +130,6 @@
 .loading-message,
 .no-results {
   text-align: center;
-<<<<<<< HEAD
   padding: 40px;
   color: var(--text-muted);
   font-size: 1rem;
@@ -157,8 +156,3 @@
     max-width: 100%;
   }
 }
-=======
-  font-weight: 500;
-  border-radius: 6px 6px 0 0;
-}
->>>>>>> 5e2b8a1 (railway config)

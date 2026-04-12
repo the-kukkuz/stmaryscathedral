@@ -166,7 +166,7 @@ const ViewDeathRecords = () => {
                 { key: "cellNo", header: "Cell No" },
                 { key: "remarks", header: "Remarks" },
               ];
-              const rows = filteredRecords.map((rec, index) => ({
+              const rows = filteredRecords.map((rec) => ({
                 regNo: rec.reg_no || "-",
                 status: rec.isParishioner === false ? "Non-Parishioner" : "Parishioner",
                 familyNo: rec.family_no || "-",
@@ -271,7 +271,7 @@ const ViewDeathRecords = () => {
               </tr>
             </thead>
             <tbody>
-              {paginatedRecords.map((rec, index) => (
+              {paginatedRecords.map((rec) => (
                 <tr key={rec._id}>
                   <td>{rec.reg_no || "-"}</td>
                   <td>

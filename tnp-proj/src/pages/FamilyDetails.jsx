@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 const FamilyDetails = () => {
   const navigate = useNavigate();
-  const { familyId } = useParams();
+  useParams();
 
   return (
     <div className="card-container1">
