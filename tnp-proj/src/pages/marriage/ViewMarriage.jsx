@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import "../../css/viewmarriage.css";
 import { generateTablePdf, generateMarriageCertificatePdf, downloadCsv } from "../../utils/pdfExport";
+import { api } from "../../api";
 
 const ViewMarriage = () => {
   const [marriages, setMarriages] = useState([]);
@@ -25,9 +26,7 @@ const ViewMarriage = () => {
   const fetchMarriages = async () => {
     try {
       setLoading(true);
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/marriages`);
-      const data = await res.json();
+      const { data } = await api.get("/marriages");
       setMarriages(data);
       setFilteredMarriages(data);
     } catch (err) {
@@ -40,9 +39,7 @@ const ViewMarriage = () => {
 
   const fetchStats = async () => {
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/marriages/stats/overview`);
-      const data = await res.json();
+      const { data } = await api.get("/marriages/stats/overview");
       setStats(data);
     } catch (err) {
       console.error("Error fetching stats:", err);
@@ -116,13 +113,7 @@ const ViewMarriage = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/marriages/${selectedMarriage._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editData),
-      });
-      if (!res.ok) throw new Error();
+      await api.put(`/marriages/${selectedMarriage._id}`, editData);
       alert("✅ Marriage updated successfully!");
       closeModal();
       fetchMarriages();
@@ -137,9 +128,7 @@ const ViewMarriage = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this marriage record?")) return;
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/marriages/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
+      await api.delete(`/marriages/${id}`);
       alert("✅ Marriage deleted successfully!");
       fetchMarriages();
       fetchStats();

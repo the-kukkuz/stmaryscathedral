@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import Marriage from "../models/Marriage.js";
 import Member from "../models/Member.js";
 
@@ -7,13 +8,38 @@ const router = express.Router();
 // ➕ Add Marriage Record
 router.post("/", async (req, res) => {
   try {
+    const payload = {
+      marriage_id: req.body.marriage_id,
+      date: req.body.date,
+      place: req.body.place,
+      solemnized_by: req.body.solemnized_by,
+      officiant_number: req.body.officiant_number,
+      spouse1_isParishioner: req.body.spouse1_isParishioner,
+      spouse1_id: req.body.spouse1_id,
+      spouse1_name: req.body.spouse1_name,
+      spouse1_address: req.body.spouse1_address,
+      spouse1_city_district: req.body.spouse1_city_district,
+      spouse1_state_country: req.body.spouse1_state_country,
+      spouse1_father_name: req.body.spouse1_father_name,
+      spouse1_mother_name: req.body.spouse1_mother_name,
+      spouse1_home_parish: req.body.spouse1_home_parish,
+      spouse2_isParishioner: req.body.spouse2_isParishioner,
+      spouse2_id: req.body.spouse2_id,
+      spouse2_name: req.body.spouse2_name,
+      spouse2_address: req.body.spouse2_address,
+      spouse2_city_district: req.body.spouse2_city_district,
+      spouse2_state_country: req.body.spouse2_state_country,
+      spouse2_father_name: req.body.spouse2_father_name,
+      spouse2_mother_name: req.body.spouse2_mother_name,
+      spouse2_home_parish: req.body.spouse2_home_parish
+    };
+
     const {
       marriage_id,
       date,
       place,
       solemnized_by,
       officiant_number,
-
       spouse1_isParishioner,
       spouse1_id,
       spouse1_name,
@@ -23,7 +49,6 @@ router.post("/", async (req, res) => {
       spouse1_father_name,
       spouse1_mother_name,
       spouse1_home_parish,
-
       spouse2_isParishioner,
       spouse2_id,
       spouse2_name,
@@ -33,7 +58,7 @@ router.post("/", async (req, res) => {
       spouse2_father_name,
       spouse2_mother_name,
       spouse2_home_parish
-    } = req.body;
+    } = payload;
 
     // Auto-generate reg_no: YY/NNNN
     const now = new Date();
@@ -71,6 +96,9 @@ router.post("/", async (req, res) => {
     let spouse2Member = null;
 
     if (spouse1_isParishioner) {
+      if (!mongoose.Types.ObjectId.isValid(spouse1_id)) {
+        return res.status(400).json({ error: "Invalid spouse 1 ID format" });
+      }
       spouse1Member = await Member.findById(spouse1_id);
       if (!spouse1Member || spouse1Member.deceased) {
         return res.status(400).json({ error: "Invalid spouse 1 member" });
@@ -78,6 +106,9 @@ router.post("/", async (req, res) => {
     }
 
     if (spouse2_isParishioner) {
+      if (!mongoose.Types.ObjectId.isValid(spouse2_id)) {
+        return res.status(400).json({ error: "Invalid spouse 2 ID format" });
+      }
       spouse2Member = await Member.findById(spouse2_id);
       if (!spouse2Member || spouse2Member.deceased) {
         return res.status(400).json({ error: "Invalid spouse 2 member" });
@@ -169,7 +200,8 @@ router.get("/", async (req, res) => {
       .sort({ date: -1 });
     res.json(marriages);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching marriages:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -186,7 +218,8 @@ router.get("/search/:name", async (req, res) => {
 
     res.json(marriages);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error searching marriages:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -203,7 +236,8 @@ router.get("/date-range", async (req, res) => {
 
     res.json(marriages);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching marriages by date range:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -223,7 +257,8 @@ router.get("/year/:year", async (req, res) => {
 
     res.json(marriages);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching marriages by year:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -257,13 +292,18 @@ router.get("/stats/overview", async (req, res) => {
       marriagesByYear
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching marriage stats:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
 // 📜 Get One Marriage
 router.get("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
     const marriage = await Marriage.findById(req.params.id)
       .populate('spouse1_id')
       .populate('spouse2_id');
@@ -274,16 +314,52 @@ router.get("/:id", async (req, res) => {
 
     res.json(marriage);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching marriage by id:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
 // ✏️ Update Marriage Record
 router.put("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
+    const allowedUpdate = {
+      marriage_id: req.body.marriage_id,
+      reg_no: req.body.reg_no,
+      spouse1_isParishioner: req.body.spouse1_isParishioner,
+      spouse1_id: req.body.spouse1_id,
+      spouse1_name: req.body.spouse1_name,
+      spouse1_address: req.body.spouse1_address,
+      spouse1_city_district: req.body.spouse1_city_district,
+      spouse1_state_country: req.body.spouse1_state_country,
+      spouse1_father_name: req.body.spouse1_father_name,
+      spouse1_mother_name: req.body.spouse1_mother_name,
+      spouse1_home_parish: req.body.spouse1_home_parish,
+      spouse2_isParishioner: req.body.spouse2_isParishioner,
+      spouse2_id: req.body.spouse2_id,
+      spouse2_name: req.body.spouse2_name,
+      spouse2_address: req.body.spouse2_address,
+      spouse2_city_district: req.body.spouse2_city_district,
+      spouse2_state_country: req.body.spouse2_state_country,
+      spouse2_father_name: req.body.spouse2_father_name,
+      spouse2_mother_name: req.body.spouse2_mother_name,
+      spouse2_home_parish: req.body.spouse2_home_parish,
+      date: req.body.date,
+      place: req.body.place,
+      solemnized_by: req.body.solemnized_by,
+      officiant_number: req.body.officiant_number
+    };
+
+    const cleanUpdate = Object.fromEntries(
+      Object.entries(allowedUpdate).filter(([, value]) => value !== undefined)
+    );
+
     const updatedMarriage = await Marriage.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      cleanUpdate,
       { new: true, runValidators: true }
     );
 
@@ -293,6 +369,7 @@ router.put("/:id", async (req, res) => {
 
     res.json(updatedMarriage);
   } catch (err) {
+    console.error("Error updating marriage:", err);
     res.status(400).json({ error: err.message });
   }
 });
@@ -300,6 +377,10 @@ router.put("/:id", async (req, res) => {
 // ❌ Delete Marriage Record
 router.delete("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
     const marriage = await Marriage.findByIdAndDelete(req.params.id);
 
     if (!marriage) {
@@ -322,7 +403,8 @@ router.delete("/:id", async (req, res) => {
 
     res.json({ message: "Marriage record deleted successfully" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error deleting marriage:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 

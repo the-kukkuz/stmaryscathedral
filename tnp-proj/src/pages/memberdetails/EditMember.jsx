@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../../css/editmember.css";
+import { api } from "../../api";
 
 const EditMember = () => {
   const [families, setFamilies] = useState([]);
@@ -27,10 +28,8 @@ const EditMember = () => {
 
   // ✅ Fetch all families on load
   useEffect(() => {
-    const API = import.meta.env.VITE_API_URL;
-    fetch(`${API}/api/families`)
-      .then((res) => res.json())
-      .then((data) => setFamilies(data))
+    api.get("/families")
+      .then(({ data }) => setFamilies(data))
       .catch((err) => console.error("❌ Error fetching families:", err));
   }, []);
 
@@ -94,12 +93,7 @@ const EditMember = () => {
   // ✅ Fetch members for a family
   const fetchMembers = async (family_number) => {
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(
-        `${API}/api/members?family_number=${family_number}`
-      );
-      if (!res.ok) throw new Error("Failed to fetch members");
-      const data = await res.json();
+      const { data } = await api.get(`/members?family_number=${family_number}`);
       setMembers(data);
     } catch (err) {
       console.error(err);
@@ -167,17 +161,7 @@ const EditMember = () => {
         baptism: formData.baptismStatus === "Yes",
       };
 
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(
-        `${API}/api/members/${selectedMember}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!res.ok) throw new Error("Failed to update member");
+      await api.put(`/members/${selectedMember}`, payload);
       alert("✅ Member updated successfully!");
     } catch (err) {
       alert(`❌ Error updating member: ${err.message}`);
@@ -292,12 +276,40 @@ const EditMember = () => {
             <label>Gender</label>
           </div>
           <div className="input-group">
-            <input
-              type="text"
+            <select
               name="relation"
               value={formData.relation}
               onChange={handleChange}
-            />
+            >
+              <option value=""></option>
+              <optgroup label="Core Family">
+                <option value="Son">Son</option>
+                <option value="Daughter">Daughter</option>
+                <option value="Wife">Wife</option>
+                <option value="Husband">Husband</option>
+                <option value="Father">Father</option>
+                <option value="Mother">Mother</option>
+              </optgroup>
+              <optgroup label="Extended Family">
+                <option value="Grandfather">Grandfather</option>
+                <option value="Grandmother">Grandmother</option>
+                <option value="Grandson">Grandson</option>
+                <option value="Granddaughter">Granddaughter</option>
+                <option value="Brother">Brother</option>
+                <option value="Sister">Sister</option>
+                <option value="Uncle">Uncle</option>
+                <option value="Aunt">Aunt</option>
+                <option value="Nephew">Nephew</option>
+                <option value="Niece">Niece</option>
+                <option value="Cousin">Cousin</option>
+                <option value="Daughter-in-Law">Daughter-in-Law</option>
+                <option value="Son-in-Law">Son-in-Law</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="Guardian">Guardian</option>
+                <option value="Other">Other</option>
+              </optgroup>
+            </select>
             <label>Relation</label>
           </div>
         </div>

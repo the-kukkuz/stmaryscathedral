@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import Baptism from "../models/Baptism.js";
 import Member from "../models/Member.js";
 import Family from "../models/Family.js";
@@ -12,7 +13,8 @@ router.get("/next-sl-no", async (req, res) => {
     const nextSlNo = lastRecord ? lastRecord.sl_no + 1 : 1;
     res.json({ next_sl_no: nextSlNo });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching next baptism serial:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -30,7 +32,7 @@ router.get("/search-families/:searchTerm", async (req, res) => {
     res.json(families);
   } catch (err) {
     console.error("Search error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -46,7 +48,8 @@ router.get("/heads-of-family/:familyName", async (req, res) => {
 
     res.json(families);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching heads of family:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -81,13 +84,17 @@ router.get("/unbaptized-members/:familyNumber", async (req, res) => {
     res.json(unbaptizedMembers);
   } catch (err) {
     console.error("Error fetching members:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
 // Utility route: Check member baptism status
 router.get("/check-member/:memberId", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.memberId)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
     const member = await Member.findById(req.params.memberId);
     if (!member) {
       return res.status(404).json({ error: "Member not found" });
@@ -105,7 +112,8 @@ router.get("/check-member/:memberId", async (req, res) => {
       status: baptismRecord ? "Baptized" : "Not Baptized"
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error checking member baptism:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -148,7 +156,8 @@ router.post("/fix-baptism-status", async (req, res) => {
       total_baptism_records: baptisms.length
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fixing baptism status:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
@@ -156,6 +165,27 @@ router.post("/fix-baptism-status", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     console.log("📥 Received baptism data:", req.body);
+
+    const payload = {
+      isParishioner: req.body.isParishioner,
+      member_id: req.body.member_id,
+      member_name: req.body.member_name,
+      member_dob: req.body.member_dob,
+      gender: req.body.gender,
+      home_parish: req.body.home_parish,
+      address: req.body.address,
+      father_name: req.body.father_name,
+      mother_name: req.body.mother_name,
+      date_of_baptism: req.body.date_of_baptism,
+      place_of_baptism: req.body.place_of_baptism,
+      church_where_baptised: req.body.church_where_baptised,
+      bapt_name: req.body.bapt_name,
+      godparent_name: req.body.godparent_name,
+      godparent_house_name: req.body.godparent_house_name,
+      baptised_by: req.body.baptised_by,
+      certificate_number: req.body.certificate_number,
+      remarks: req.body.remarks
+    };
 
     const {
       isParishioner,
@@ -176,7 +206,7 @@ router.post("/", async (req, res) => {
       baptised_by,
       certificate_number,
       remarks
-    } = req.body;
+    } = payload;
 
     // Get next serial number
     const lastRecord = await Baptism.findOne().sort({ sl_no: -1 });
@@ -219,6 +249,10 @@ router.post("/", async (req, res) => {
     if (isParishioner) {
       if (!member_id) {
         return res.status(400).json({ error: "Member ID required for parishioner" });
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(member_id)) {
+        return res.status(400).json({ error: "Invalid member ID format" });
       }
 
       const member = await Member.findById(member_id);
@@ -302,13 +336,18 @@ router.get("/", async (req, res) => {
       .sort({ sl_no: -1 });
     res.json(baptisms);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching baptism records:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
 // Get single baptism record
 router.get("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
     const baptism = await Baptism.findById(req.params.id)
       .populate('member_id');
 
@@ -318,16 +357,50 @@ router.get("/:id", async (req, res) => {
 
     res.json(baptism);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching baptism by id:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
 // Update baptism record
 router.put("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
+    const allowedUpdate = {
+      reg_no: req.body.reg_no,
+      isParishioner: req.body.isParishioner,
+      family_number: req.body.family_number,
+      family_name: req.body.family_name,
+      hof: req.body.hof,
+      member_id: req.body.member_id,
+      member_name: req.body.member_name,
+      member_dob: req.body.member_dob,
+      gender: req.body.gender,
+      home_parish: req.body.home_parish,
+      address: req.body.address,
+      father_name: req.body.father_name,
+      mother_name: req.body.mother_name,
+      date_of_baptism: req.body.date_of_baptism,
+      place_of_baptism: req.body.place_of_baptism,
+      church_where_baptised: req.body.church_where_baptised,
+      bapt_name: req.body.bapt_name,
+      godparent_name: req.body.godparent_name,
+      godparent_house_name: req.body.godparent_house_name,
+      baptised_by: req.body.baptised_by,
+      certificate_number: req.body.certificate_number,
+      remarks: req.body.remarks
+    };
+
+    const cleanUpdate = Object.fromEntries(
+      Object.entries(allowedUpdate).filter(([, value]) => value !== undefined)
+    );
+
     const updatedBaptism = await Baptism.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      cleanUpdate,
       { new: true, runValidators: true }
     );
 
@@ -340,6 +413,7 @@ router.put("/:id", async (req, res) => {
       data: updatedBaptism
     });
   } catch (err) {
+    console.error("Error updating baptism:", err);
     res.status(400).json({ error: err.message });
   }
 });
@@ -347,6 +421,10 @@ router.put("/:id", async (req, res) => {
 // Delete baptism record
 router.delete("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
     const baptism = await Baptism.findById(req.params.id);
 
     if (!baptism) {
@@ -368,7 +446,8 @@ router.delete("/:id", async (req, res) => {
       message: "Baptism record deleted successfully"
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error deleting baptism:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 

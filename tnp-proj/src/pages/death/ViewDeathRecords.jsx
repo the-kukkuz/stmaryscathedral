@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "../../css/viewdeath.css";
 import { generateTablePdf, generateDeathCertificatePdf, downloadCsv } from "../../utils/pdfExport";
+import { api } from "../../api";
 
 const ViewDeathRecords = () => {
 
@@ -22,10 +23,7 @@ const ViewDeathRecords = () => {
   const fetchRecords = async () => {
     try {
       setLoading(true);
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/deaths`);
-      if (!res.ok) throw new Error("Failed to fetch death records");
-      const data = await res.json();
+      const { data } = await api.get("/deaths");
       setRecords(data);
     } catch (err) {
       console.error(err);
@@ -39,9 +37,7 @@ const ViewDeathRecords = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this record?")) return;
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/deaths/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error();
+      await api.delete(`/deaths/${id}`);
       alert("Deleted successfully");
       fetchRecords();
     } catch {
@@ -83,13 +79,7 @@ const ViewDeathRecords = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/deaths/${editData._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editData),
-      });
-      if (!res.ok) throw new Error();
+      await api.put(`/deaths/${editData._id}`, editData);
       alert("✅ Record updated successfully");
       setEditModal(false);
       fetchRecords();

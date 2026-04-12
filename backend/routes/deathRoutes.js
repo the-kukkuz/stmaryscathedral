@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import Death from "../models/Death.js";
 import Member from "../models/Member.js";
 
@@ -7,12 +8,33 @@ const router = express.Router();
 // ➕ Add Death Record
 router.post("/", async (req, res) => {
   try {
+    const payload = {
+      isParishioner: req.body.isParishioner,
+      memberId: req.body.memberId,
+      nextHofId: req.body.nextHofId,
+      family_no: req.body.family_no,
+      name: req.body.name,
+      house_name: req.body.house_name,
+      address_place: req.body.address_place,
+      father_husband_name: req.body.father_husband_name,
+      mother_wife_name: req.body.mother_wife_name,
+      death_date: req.body.death_date,
+      burial_date: req.body.burial_date,
+      age: req.body.age,
+      conducted_by: req.body.conducted_by,
+      cause_of_death: req.body.cause_of_death,
+      cell_no: req.body.cell_no,
+      remarks: req.body.remarks,
+      block: req.body.block,
+      unit: req.body.unit
+    };
+
     const {
       isParishioner,
       memberId,
       nextHofId,
       ...deathData
-    } = req.body;
+    } = payload;
 
     // Auto-generate reg_no: YY/NNNN
     const now = new Date();
@@ -59,6 +81,10 @@ router.post("/", async (req, res) => {
       });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(memberId)) {
+      return res.status(400).json({ error: "Invalid member ID format" });
+    }
+
     const memberToDecease = await Member.findById(memberId);
     if (!memberToDecease) {
       return res.status(404).json({ error: "Member not found" });
@@ -87,6 +113,10 @@ router.post("/", async (req, res) => {
       let newHof;
 
       if (nextHofId) {
+        if (!mongoose.Types.ObjectId.isValid(nextHofId)) {
+          return res.status(400).json({ error: "Invalid next HOF ID format" });
+        }
+
         newHof = await Member.findByIdAndUpdate(
           nextHofId,
           { hof: true },
@@ -130,7 +160,7 @@ router.post("/", async (req, res) => {
     }
 
     res.status(500).json({
-      error: "An internal server error occurred"
+      error: "An internal error occurred"
     });
   }
 });
@@ -142,29 +172,63 @@ router.get("/", async (req, res) => {
     const deaths = await Death.find().sort({ death_date: -1 });
     res.json(deaths);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching death records:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
 // 📜 Get One Death Record
 router.get("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
     const death = await Death.findById(req.params.id);
     if (!death) {
       return res.status(404).json({ error: "Death record not found" });
     }
     res.json(death);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching death record:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
 // ✏️ Update Death Record
 router.put("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
+    const allowedUpdate = {
+      isParishioner: req.body.isParishioner,
+      member_id: req.body.member_id,
+      family_no: req.body.family_no,
+      name: req.body.name,
+      house_name: req.body.house_name,
+      address_place: req.body.address_place,
+      father_husband_name: req.body.father_husband_name,
+      mother_wife_name: req.body.mother_wife_name,
+      death_date: req.body.death_date,
+      burial_date: req.body.burial_date,
+      age: req.body.age,
+      conducted_by: req.body.conducted_by,
+      cause_of_death: req.body.cause_of_death,
+      cell_no: req.body.cell_no,
+      remarks: req.body.remarks,
+      block: req.body.block,
+      unit: req.body.unit
+    };
+
+    const cleanUpdate = Object.fromEntries(
+      Object.entries(allowedUpdate).filter(([, value]) => value !== undefined)
+    );
+
     const updatedDeath = await Death.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      cleanUpdate,
       { new: true, runValidators: true }
     );
 
@@ -174,6 +238,7 @@ router.put("/:id", async (req, res) => {
 
     res.json(updatedDeath);
   } catch (err) {
+    console.error("Error updating death record:", err);
     res.status(400).json({ error: err.message });
   }
 });
@@ -181,6 +246,10 @@ router.put("/:id", async (req, res) => {
 // ❌ Delete Death Record
 router.delete("/:id", async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
     const record = await Death.findById(req.params.id);
     if (!record) {
       return res.status(404).json({ error: "Death record not found" });
@@ -196,7 +265,8 @@ router.delete("/:id", async (req, res) => {
 
     res.json({ message: "Death record deleted successfully" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error deleting death record:", err);
+    res.status(500).json({ error: "An internal error occurred" });
   }
 });
 
