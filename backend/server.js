@@ -45,7 +45,7 @@ app.use(helmet.contentSecurityPolicy({
     scriptSrc: ["'self'", "'unsafe-inline'"],
     styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
     fontSrc: ["'self'", "https://fonts.gstatic.com"],
-    imgSrc: ["'self'", "data:", "blob:"]
+    imgSrc: ["'self'", "data:", "blob:", "https:", "http:"] // Allow all external images for now to debug
   }
 }));
 
