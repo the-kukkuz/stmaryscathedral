@@ -58,6 +58,10 @@ app.use(express.json());
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 app.use("/api/auth/login", loginLimiter);
 app.use("/api", apiLimiter);
 
