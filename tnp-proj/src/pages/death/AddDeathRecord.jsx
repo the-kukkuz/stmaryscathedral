@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "../../css/deathadd.css";
 import { generateDeathCertificatePdf } from "../../utils/pdfExport";
+import { buildAddress, inferParentSpouseNames } from "../../utils/relationInference";
+import { api } from "../../api";
 
 const AddDeathRecord = () => {
   const [families, setFamilies] = useState([]);
@@ -77,35 +79,32 @@ const AddDeathRecord = () => {
 
   // Fetch families on mount
   useEffect(() => {
-    const API = import.meta.env.VITE_API_URL;
-    fetch(`${API}/api/families`)
-      .then((res) => res.json())
-      .then((data) => setFamilies(data))
+    api.get("/families")
+      .then(({ data }) => setFamilies(data))
       .catch((err) => console.error("Error fetching families:", err));
   }, []);
 
-  // Filter families by name
+  // Filter families by name + selected block/unit
   useEffect(() => {
     if (searchQuery.trim() === "" || (selectedFamily && searchQuery === selectedFamily.name)) {
       setFilteredFamilies([]);
     } else {
       setFilteredFamilies(
-        families.filter((fam) =>
-          fam.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+        families.filter((fam) => {
+          const nameMatch = fam.name.toLowerCase().includes(searchQuery.toLowerCase());
+          const blockMatch = !formData.block || String(fam.ward_number) === String(formData.block);
+          const unitMatch = !formData.unit || String(fam.family_unit) === String(formData.unit);
+          return nameMatch && blockMatch && unitMatch;
+        })
       );
     }
-  }, [searchQuery, families, selectedFamily]);
+  }, [searchQuery, families, selectedFamily, formData.block, formData.unit]);
 
   // Fetch members when family selected
   useEffect(() => {
     if (selectedHof && selectedFamily) {
-      const API = import.meta.env.VITE_API_URL;
-      fetch(
-        `${API}/api/members?family_number=${selectedFamily.family_number}`
-      )
-        .then((res) => res.json())
-        .then((data) => setMembers(data))
+      api.get(`/members?family_number=${selectedFamily.family_number}`)
+        .then(({ data }) => setMembers(data))
         .catch((err) => console.error("Error fetching members:", err));
     }
   }, [selectedHof, selectedFamily]);
@@ -113,30 +112,47 @@ const AddDeathRecord = () => {
 
   // Autofill when member selected
   useEffect(() => {
-    if (selectedMember) {
-      const memberObj = members.find((m) => m._id === selectedMember);
-      if (memberObj) {
-        setFormData((prev) => ({
-          ...prev,
-          name: memberObj.name || "",
-          house_name: memberObj.house_name || "",
-          address_place: memberObj.address || "",
-          father_husband_name:
-            memberObj.father_name || memberObj.husband_name || "",
-          mother_wife_name: memberObj.mother_name || memberObj.wife_name || "",
-          age: memberObj.age || "",
-          cell_no: memberObj.phone || "",
-        }));
+    if (selectedMember && selectedFamily) {
+      // Fetch family data to get location, village, and hof name
+      api.get(`/families/number/${selectedFamily.family_number}`)
+        .then(({ data: family }) => {
+          const memberObj = members.find((m) => m._id === selectedMember);
+          
+          if (memberObj) {
+            // Build address from family location + village
+            const address = buildAddress(family);
+            
+            // Infer parent/spouse names from family structure
+            const { fatherName, motherName, spouseName } = inferParentSpouseNames(
+              memberObj,
+              members,
+              family.hof
+            );
+            
+            setFormData((prev) => ({
+              ...prev,
+              name: memberObj.name || "",
+              house_name: family.name || "",
+              address_place: address,
+              block: family.ward_number || "",
+              unit: family.family_unit || "",
+              father_husband_name: fatherName || spouseName || "",
+              mother_wife_name: motherName || "",
+              age: memberObj.age || "",
+              cell_no: memberObj.phone || "",
+            }));
 
-        if (memberObj.hof) {
-          setIsHof(true);
-        } else {
-          setIsHof(false);
-          setNextHof("");
-        }
-      }
+            if (memberObj.hof) {
+              setIsHof(true);
+            } else {
+              setIsHof(false);
+              setNextHof("");
+            }
+          }
+        })
+        .catch((err) => console.error("Error fetching family data:", err));
     }
-  }, [selectedMember, members]);
+  }, [selectedMember, selectedFamily, members]);
 
   // Handle form input
   const handleChange = (e) => {
@@ -209,18 +225,7 @@ const AddDeathRecord = () => {
     };
 
     try {
-      const API = import.meta.env.VITE_API_URL;
-      const res = await fetch(`${API}/api/deaths`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json(); // ✅ Get response data for better error handling
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to add death record");
-      }
+      const { data } = await api.post("/deaths", payload);
 
       alert("✅ Death record added successfully!");
       setSavedRecord(data.death);
@@ -318,9 +323,9 @@ const AddDeathRecord = () => {
                   onChange={handleChange}
                 >
                   <option value="">Select Unit</option>
-                  {blockUnits[formData.block].map((unitObj) => (
-                    <option key={unitObj.number} value={`${unitObj.number} - ${unitObj.name}`}>
-                      Unit {unitObj.number} - {unitObj.name}
+                  {(blockUnits[parseInt(formData.block)] || []).map((unit) => (
+                    <option key={unit.number} value={String(unit.number)}>
+                      Unit {unit.number} — {unit.name}
                     </option>
                   ))}
                 </select>

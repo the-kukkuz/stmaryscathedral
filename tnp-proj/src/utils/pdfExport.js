@@ -1,19 +1,44 @@
 import jsPDF from "jspdf";
 
+const sanitizeText = (value) => {
+  const str = value == null ? "" : String(value);
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
+
+const maskAadhaar = (value) => {
+  if (value == null) return "";
+  const digits = String(value).replace(/\D/g, "");
+  if (digits.length < 4) return "";
+  const last4 = digits.slice(-4);
+  return `XXXX-XXXX-${last4}`;
+};
+
+const sanitizeCellValue = (value, key) => {
+  if (key && key.toLowerCase().includes("aadhaar")) {
+    return maskAadhaar(value);
+  }
+  return sanitizeText(value);
+};
+
 /**
  * Download data as a .csv file — no dependencies needed.
  * Uses the same { columns, rows, fileName } shape as generateTablePdf.
  */
 export function downloadCsv({ columns, rows, fileName }) {
   const escape = (val) => {
-    const str = val == null ? "" : String(val);
+    const str = sanitizeText(val);
     // Wrap in quotes if it contains a comma, quote, or newline
     return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
   };
 
   const header = columns.map((col) => escape(col.header)).join(",");
   const body = rows
-    .map((row) => columns.map((col) => escape(row[col.key])).join(","))
+    .map((row) => columns.map((col) => escape(sanitizeCellValue(row[col.key], col.key))).join(","))
     .join("\n");
 
   const csv = `${header}\n${body}`;
@@ -84,7 +109,7 @@ export function generateTablePdf({ title, columns, rows, fileName }) {
     // First pass: measure text and heights
     columns.forEach((col, index) => {
       const width = colWidths[index];
-      const headerText = String(col.header ?? "");
+      const headerText = sanitizeText(col.header ?? "");
       const lines = doc.splitTextToSize(headerText, width - 4);
       const height = lines.length * 4 + 4; // 4mm per line + padding
       headerData[index] = { lines, height };
@@ -135,7 +160,7 @@ export function generateTablePdf({ title, columns, rows, fileName }) {
     columns.forEach((col, index) => {
       const width = colWidths[index];
       const raw = row[col.key];
-      const cellText = raw == null ? "" : String(raw);
+      const cellText = sanitizeCellValue(raw, col.key);
       const lines = doc.splitTextToSize(cellText, width - 4);
       cellLinesPerColumn[index] = lines;
       const height = lines.length * 4 + 4;
@@ -199,11 +224,12 @@ function createCertificateDoc(title) {
  * Returns the height of the row drawn.
  */
 function drawTableRow(doc, { y, labelX, labelWidth, valueWidth, label, value, lineHeight = 6, padding = 3 }) {
-  const safeValue = value == null ? "" : Array.isArray(value) ? value.join(" ") : String(value);
+  const safeValue = sanitizeText(value == null ? "" : Array.isArray(value) ? value.join(" ") : String(value));
+  const safeLabel = sanitizeText(label);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  const labelLines = doc.splitTextToSize(label, labelWidth - 2 * padding);
+  const labelLines = doc.splitTextToSize(safeLabel, labelWidth - 2 * padding);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
@@ -327,7 +353,7 @@ export function generateDeathCertificatePdf(record) {
   y += 10;
   drawCertFooter(doc, pageWidth, y, margin);
 
-  doc.save(`death_certificate_${regNo || record.name || "record"}.pdf`);
+  doc.save(`death_certificate_${sanitizeText(regNo || record.name || "record")}.pdf`);
 }
 
 // ============================================================
@@ -370,7 +396,7 @@ export function generateBaptismCertificatePdf(record) {
   y += 10;
   drawCertFooter(doc, pageWidth, y, margin);
 
-  doc.save(`baptism_certificate_${regNo || record.member_name || "record"}.pdf`);
+  doc.save(`baptism_certificate_${sanitizeText(regNo || record.member_name || "record")}.pdf`);
 }
 
 // ============================================================
@@ -380,7 +406,7 @@ export function generateMarriageCertificatePdf(record) {
   const { doc, pageWidth, pageHeight, margin } = createCertificateDoc("Marriage Certificate");
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-GB") : "";
-  const safe = (v) => v == null ? "" : String(v);
+  const safe = (v) => sanitizeText(v == null ? "" : String(v));
   const regNo = record.reg_no || "";
 
   // Layout constants — tighter to fit one page
@@ -532,7 +558,6 @@ export function generateMarriageCertificatePdf(record) {
   doc.setFontSize(10);
   doc.text("Vicar", pageWidth - margin - 33, y + 16, { align: "center" });
 
-  doc.save(`marriage_certificate_${regNo || "record"}.pdf`);
+  doc.save(`marriage_certificate_${sanitizeText(regNo || "record")}.pdf`);
 }
-
 

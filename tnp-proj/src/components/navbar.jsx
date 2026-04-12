@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import '../css/navbar.css';
 import pic1 from '../assets/images/logo.jpg';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { jwtDecode } from "jwt-decode";
+
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -9,10 +11,22 @@ const Navbar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    const isTokenValid = (token) => {
+      if (!token) return false;
+      try {
+        const decoded = jwtDecode(token);
+        if (!decoded?.exp) return false;
+        const now = Math.floor(Date.now() / 1000);
+        return decoded.exp > now;
+      } catch {
+        return false;
+      }
+    };
+
     const checkAuth = () => {
-      const auth = localStorage.getItem('isAuthenticated');
+      const token = localStorage.getItem('token');
       const user = localStorage.getItem('username');
-      setIsAuthenticated(!!auth);
+      setIsAuthenticated(isTokenValid(token));
       setUsername(user || 'User');
     };
 
@@ -20,7 +34,7 @@ const Navbar = () => {
   }, [location]);
 
   const handleSignOut = () => {
-    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('token');
     localStorage.removeItem('username');
     navigate('/SignIn');
   };
