@@ -37,6 +37,7 @@ for (const key of required) {
 }
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(helmet());
 app.use(helmet.contentSecurityPolicy({
   directives: {
