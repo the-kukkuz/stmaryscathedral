@@ -2,8 +2,11 @@ import express from "express";
 import mongoose from "mongoose";
 import Marriage from "../models/Marriage.js";
 import Member from "../models/Member.js";
+import { nextSequence, buildYearRegNo } from "../utils/sequence.js";
 
 const router = express.Router();
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // ➕ Add Marriage Record
 router.post("/", async (req, res) => {
@@ -60,15 +63,10 @@ router.post("/", async (req, res) => {
       spouse2_home_parish
     } = payload;
 
-    // Auto-generate reg_no: YY/NNNN
+    // Auto-generate reg_no: YY/NNNN (atomic sequence)
     const now = new Date();
-    const year2 = String(now.getFullYear()).slice(-2);
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
-    const countThisYear = await Marriage.countDocuments({
-      createdAt: { $gte: startOfYear, $lte: endOfYear }
-    });
-    const regNo = `${year2}/${String(countThisYear + 1).padStart(4, '0')}`;
+    const nextRegSeq = await nextSequence(`marriage:reg:${now.getFullYear()}`);
+    const regNo = buildYearRegNo(now, nextRegSeq);
 
     // ----------------------------
     // Basic validation
@@ -187,7 +185,7 @@ router.post("/", async (req, res) => {
       return res.status(409).json({ error: "Duplicate marriage ID" });
     }
 
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: "Invalid marriage data" });
   }
 });
 
@@ -208,11 +206,17 @@ router.get("/", async (req, res) => {
 // 🔍 Search marriages by spouse name
 router.get("/search/:name", async (req, res) => {
   try {
-    const searchName = req.params.name;
+    const searchName = String(req.params.name || "").trim();
+    if (!searchName) {
+      return res.json([]);
+    }
+
+    const safeName = escapeRegex(searchName.slice(0, 64));
+
     const marriages = await Marriage.find({
       $or: [
-        { spouse1_name: { $regex: searchName, $options: 'i' } },
-        { spouse2_name: { $regex: searchName, $options: 'i' } }
+        { spouse1_name: { $regex: safeName, $options: "i" } },
+        { spouse2_name: { $regex: safeName, $options: "i" } }
       ]
     }).sort({ date: -1 });
 
@@ -370,7 +374,7 @@ router.put("/:id", async (req, res) => {
     res.json(updatedMarriage);
   } catch (err) {
     console.error("Error updating marriage:", err);
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: "Invalid marriage update data" });
   }
 });
 

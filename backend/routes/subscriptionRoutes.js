@@ -425,7 +425,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: "Invalid subscription data" });
   }
 });
 
@@ -509,7 +509,7 @@ router.put("/:id", async (req, res) => {
     res.json(updatedSubscription);
   } catch (err) {
     console.error("Error updating subscription:", err);
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: "Invalid subscription update data" });
   }
 });
 

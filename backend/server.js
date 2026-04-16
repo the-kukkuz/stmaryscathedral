@@ -42,11 +42,11 @@ app.use(helmet());
 app.use(helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],
-    connectSrc: ["'self'", "*"], // Allow 'self' for API and * for troubleshooting (can tighten later)
+    connectSrc: ["'self'", process.env.ALLOWED_ORIGIN],
     scriptSrc: ["'self'", "'unsafe-inline'"],
     styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
     fontSrc: ["'self'", "https://fonts.gstatic.com"],
-    imgSrc: ["'self'", "data:", "blob:", "https:", "http:"] // Allow all external images for now to debug
+    imgSrc: ["'self'", "data:", "blob:"]
   }
 }));
 
@@ -97,6 +97,28 @@ app.use(express.static(path.join(__dirname, "../tnp-proj/dist")));
 // Catch-all route for React Router - use regex instead of "*"
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, "../tnp-proj/dist/index.html"));
+});
+
+app.use((err, req, res, next) => {
+  console.error("Unhandled route error:", err);
+
+  const status = err.status || 500;
+  const message = status >= 500 ? "An internal error occurred" : (err.message || "Request failed");
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  res.status(status).json({ error: message });
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception:", error);
+  process.exit(1);
 });
 
 const PORT = process.env.PORT || 3000;
