@@ -30,11 +30,7 @@ const AddMarriage = () => {
   const [manualGroomMotherName, setManualGroomMotherName] = useState("");
   const [manualBrideMotherName, setManualBrideMotherName] = useState("");
 
-  // State to store fetched family data for auto-filling
-  const [groomFamilyData, setGroomFamilyData] = useState(null);
-  const [groomFamilyMembers, setGroomFamilyMembers] = useState([]);
-  const [brideFamilyData, setBrideFamilyData] = useState(null);
-  const [brideFamilyMembers, setBrideFamilyMembers] = useState([]);
+
 
 
   const [marriageData, setMarriageData] = useState({
@@ -93,13 +89,12 @@ const AddMarriage = () => {
       api.get(`/families/number/${selectedGroom.family_number}`)
         .then(({ data: family }) => {
           fetchedFamily = family;
-          setGroomFamilyData(family);
+          fetchedFamily = family;
           
           // Fetch all family members
           return api.get(`/members?family_number=${selectedGroom.family_number}`);
         })
         .then(({ data: members }) => {
-          setGroomFamilyMembers(members);
           
           // Build address and infer parent names
           const address = buildAddress(fetchedFamily || {});
@@ -140,13 +135,12 @@ const AddMarriage = () => {
       api.get(`/families/number/${selectedBride.family_number}`)
         .then(({ data: family }) => {
           fetchedFamily = family;
-          setBrideFamilyData(family);
+          fetchedFamily = family;
           
           // Fetch all family members
           return api.get(`/members?family_number=${selectedBride.family_number}`);
         })
         .then(({ data: members }) => {
-          setBrideFamilyMembers(members);
           
           // Build address and infer parent names
           const address = buildAddress(fetchedFamily || {});

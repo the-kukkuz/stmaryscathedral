@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import Member from "../models/Member.js";
+import Family from "../models/Family.js";
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ router.post("/", async (req, res) => {
     res.status(201).json(newMember);
   } catch (err) {
     console.error("Error creating member:", err);
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: "Invalid member data" });
   }
 });
 
@@ -110,25 +111,62 @@ router.put("/:id", async (req, res) => {
       { new: true }
     );
 
+    if (!updatedMember) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
     res.json(updatedMember);
 
   } catch (err) {
     console.error("Error updating member:", err);
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: "Invalid member update data" });
   }
 });
 // Delete member
 router.delete("/:id", async (req, res) => {
+  let session;
+
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ error: "Invalid ID format" });
     }
 
-    await Member.findByIdAndDelete(req.params.id);
+    session = await mongoose.startSession();
+
+    await session.withTransaction(async () => {
+      const member = await Member.findById(req.params.id).session(session);
+
+      if (!member) {
+        const err = new Error("Member not found");
+        err.status = 404;
+        throw err;
+      }
+
+      await Member.findByIdAndDelete(req.params.id, { session });
+
+      const currentCount = await Member.countDocuments({
+        family_number: member.family_number
+      }).session(session);
+
+      await Family.findOneAndUpdate(
+        { family_number: member.family_number },
+        { count: currentCount },
+        { session, runValidators: true }
+      );
+    });
+
     res.json({ message: "Member deleted" });
   } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({ error: err.message });
+    }
+
     console.error("Error deleting member:", err);
     res.status(500).json({ error: "An internal error occurred" });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 });
 

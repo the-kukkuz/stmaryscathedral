@@ -270,28 +270,6 @@ function drawTableRow(doc, { y, labelX, labelWidth, valueWidth, label, value, li
   return rowHeight;
 }
 
-/**
- * Draws a section header row spanning the full table width
- */
-function drawSectionHeader(doc, { y, labelX, totalWidth, text, lineHeight = 6, padding = 3 }) {
-  const rowHeight = lineHeight + 2 * padding;
-
-  // Background fill (slightly darker cream)
-  doc.setFillColor(235, 222, 205);
-  doc.rect(labelX, y, totalWidth, rowHeight, "F");
-
-  // Border
-  doc.setDrawColor(160, 130, 100);
-  doc.setLineWidth(0.25);
-  doc.rect(labelX, y, totalWidth, rowHeight);
-
-  // Text
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text(text, labelX + totalWidth / 2, y + padding + 4, { align: "center" });
-
-  return rowHeight;
-}
 
 function drawCertFooter(doc, pageWidth, y, margin) {
   y += 15; // extra gap after table
@@ -403,7 +381,7 @@ export function generateBaptismCertificatePdf(record) {
 // MARRIAGE CERTIFICATE  (single-page, two-column layout)
 // ============================================================
 export function generateMarriageCertificatePdf(record) {
-  const { doc, pageWidth, pageHeight, margin } = createCertificateDoc("Marriage Certificate");
+  const { doc, pageWidth, margin } = createCertificateDoc("Marriage Certificate");
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-GB") : "";
   const safe = (v) => sanitizeText(v == null ? "" : String(v));

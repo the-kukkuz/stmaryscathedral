@@ -37,13 +37,16 @@ for (const key of required) {
 }
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(helmet());
 app.use(helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'"],
-    styleSrc: ["'self'", "'unsafe-inline'"],
-    imgSrc: ["'self'", "data:"]
+    connectSrc: ["'self'", process.env.ALLOWED_ORIGIN],
+    scriptSrc: ["'self'", "'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+    fontSrc: ["'self'", "https://fonts.gstatic.com"],
+    imgSrc: ["'self'", "data:", "blob:"]
   }
 }));
 
@@ -57,6 +60,10 @@ app.use(express.json());
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
+
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
 app.use("/api/auth/login", loginLimiter);
 app.use("/api", apiLimiter);
@@ -90,6 +97,28 @@ app.use(express.static(path.join(__dirname, "../tnp-proj/dist")));
 // Catch-all route for React Router - use regex instead of "*"
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, "../tnp-proj/dist/index.html"));
+});
+
+app.use((err, req, res, next) => {
+  console.error("Unhandled route error:", err);
+
+  const status = err.status || 500;
+  const message = status >= 500 ? "An internal error occurred" : (err.message || "Request failed");
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  res.status(status).json({ error: message });
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception:", error);
+  process.exit(1);
 });
 
 const PORT = process.env.PORT || 3000;

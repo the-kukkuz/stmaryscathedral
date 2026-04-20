@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import Family from "../models/Family.js";
 import Subscription from "../models/Subscription.js";
+import Member from "../models/Member.js";
 
 const router = express.Router();
 
@@ -47,7 +48,7 @@ router.post("/", async (req, res) => {
   } catch (err) {
     console.error("Error creating family:", err);
     res.status(400).json({
-      error: err.message
+      error: "Invalid family data"
     });
 
   }
@@ -218,7 +219,7 @@ router.put("/:id/subscription-amount", async (req, res) => {
   } catch (err) {
     console.error("Error updating subscription amount:", err);
     res.status(400).json({
-      error: err.message
+      error: "Invalid subscription amount"
     });
 
   }
@@ -316,7 +317,7 @@ router.put("/:id", async (req, res) => {
   } catch (err) {
     console.error("Error updating family:", err);
     res.status(400).json({
-      error: err.message
+      error: "Invalid family update data"
     });
 
   }
@@ -333,6 +334,26 @@ router.delete("/:id", async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({
         error: "Invalid ID format"
+      });
+    }
+
+    const family = await Family.findById(req.params.id).lean();
+
+    if (!family) {
+
+      return res.status(404).json({
+        error: "Family not found"
+      });
+
+    }
+
+    const memberCount = await Member.countDocuments({
+      family_number: family.family_number
+    });
+
+    if (memberCount > 0) {
+      return res.status(409).json({
+        error: "Cannot delete family with existing members"
       });
     }
 
@@ -402,7 +423,7 @@ router.put("/update-count/:family_number", async (req, res) => {
   } catch (err) {
     console.error("Error updating family count:", err);
     res.status(400).json({
-      error: err.message
+      error: "Invalid member count value"
     });
 
   }

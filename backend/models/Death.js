@@ -4,6 +4,8 @@ const DeathRecordSchema = new mongoose.Schema({
 
   reg_no: {
     type: String,
+    unique: true,
+    sparse: true,
   },
 
   // 🔑 Key switch

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "../../css/addfamily.css";
+import { api } from "../../api";
 
 const AddFamily = () => {
 
@@ -110,11 +110,7 @@ const AddFamily = () => {
 
     try {
 
-      const API = import.meta.env.VITE_API_URL;
-      await axios.post(
-        `${API}/api/families`,
-        form
-      );
+      await api.post("/families", form);
 
       alert("Family added successfully");
 
