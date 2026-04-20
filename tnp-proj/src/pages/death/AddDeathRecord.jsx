@@ -4,12 +4,32 @@ import { generateDeathCertificatePdf } from "../../utils/pdfExport";
 import { buildAddress, inferParentSpouseNames } from "../../utils/relationInference";
 import { api } from "../../api";
 
+const normalizeBlockValue = (value) => {
+  if (value === undefined || value === null) return "";
+
+  const str = String(value).trim();
+  const blockMatch = str.match(/^Block\s*(\d+)$/i);
+  if (blockMatch) return String(parseInt(blockMatch[1], 10));
+
+  const numberMatch = str.match(/^(\d+)$/);
+  if (numberMatch) return String(parseInt(numberMatch[1], 10));
+
+  return str;
+};
+
+const normalizeUnitValue = (value) => {
+  if (value === undefined || value === null || value === "") return "";
+
+  const parsed = parseInt(String(value).trim(), 10);
+  if (Number.isNaN(parsed)) return String(value).trim();
+
+  return String(parsed);
+};
+
 const AddDeathRecord = () => {
   const [families, setFamilies] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [filteredFamilies, setFilteredFamilies] = useState([]);
   const [selectedFamily, setSelectedFamily] = useState(null);
-  const [selectedHof, setSelectedHof] = useState("");
   const [members, setMembers] = useState([]);
   const [selectedMember, setSelectedMember] = useState("");
   const [isHof, setIsHof] = useState(false);
@@ -79,35 +99,85 @@ const AddDeathRecord = () => {
 
   // Fetch families on mount
   useEffect(() => {
-    api.get("/families")
-      .then(({ data }) => setFamilies(data))
-      .catch((err) => console.error("Error fetching families:", err));
+    let cancelled = false;
+
+    const fetchAllFamilies = async () => {
+      try {
+        const limit = 200;
+        let page = 1;
+        let allFamilies = [];
+
+        while (true) {
+          const { data } = await api.get("/families", {
+            params: { page, limit }
+          });
+
+          if (!Array.isArray(data) || data.length === 0) {
+            break;
+          }
+
+          allFamilies = allFamilies.concat(data);
+
+          if (data.length < limit) {
+            break;
+          }
+
+          page += 1;
+        }
+
+        if (!cancelled) {
+          setFamilies(allFamilies);
+        }
+      } catch (err) {
+        console.error("Error fetching families:", err);
+      }
+    };
+
+    fetchAllFamilies();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Filter families by name + selected block/unit
+  // Filter families by selected block + unit
   useEffect(() => {
-    if (searchQuery.trim() === "" || (selectedFamily && searchQuery === selectedFamily.name)) {
+    const hasBlockAndUnit = Boolean(formData.block && formData.unit);
+
+    if (!hasBlockAndUnit) {
       setFilteredFamilies([]);
-    } else {
-      setFilteredFamilies(
-        families.filter((fam) => {
-          const nameMatch = fam.name.toLowerCase().includes(searchQuery.toLowerCase());
-          const blockMatch = !formData.block || String(fam.ward_number) === String(formData.block);
-          const unitMatch = !formData.unit || String(fam.family_unit) === String(formData.unit);
-          return nameMatch && blockMatch && unitMatch;
-        })
-      );
+      return;
     }
-  }, [searchQuery, families, selectedFamily, formData.block, formData.unit]);
+
+    const scopedFamilies = families.filter((fam) => {
+      const blockMatch = normalizeBlockValue(fam.ward_number) === normalizeBlockValue(formData.block);
+      const unitMatch = normalizeUnitValue(fam.family_unit) === normalizeUnitValue(formData.unit);
+      return blockMatch && unitMatch;
+    });
+
+    const sortedFamilies = [...scopedFamilies].sort((a, b) => {
+      const aName = (a.name || "").toLowerCase();
+      const bName = (b.name || "").toLowerCase();
+
+      const byName = aName.localeCompare(bName);
+      if (byName !== 0) return byName;
+
+      return String(a.family_number || "").localeCompare(String(b.family_number || ""));
+    });
+
+    setFilteredFamilies(sortedFamilies);
+  }, [families, formData.block, formData.unit]);
 
   // Fetch members when family selected
   useEffect(() => {
-    if (selectedHof && selectedFamily) {
+    if (selectedFamily) {
       api.get(`/members?family_number=${selectedFamily.family_number}`)
         .then(({ data }) => setMembers(data))
         .catch((err) => console.error("Error fetching members:", err));
+    } else {
+      setMembers([]);
     }
-  }, [selectedHof, selectedFamily]);
+  }, [selectedFamily]);
 
 
   // Autofill when member selected
@@ -134,8 +204,8 @@ const AddDeathRecord = () => {
               name: memberObj.name || "",
               house_name: family.name || "",
               address_place: address,
-              block: family.ward_number || "",
-              unit: family.family_unit || "",
+              block: normalizeBlockValue(family.ward_number),
+              unit: normalizeUnitValue(family.family_unit),
               father_husband_name: fatherName || spouseName || "",
               mother_wife_name: motherName || "",
               age: memberObj.age || "",
@@ -163,7 +233,6 @@ const AddDeathRecord = () => {
 
     // 🔥 reset dependent state safely
     setSelectedFamily(null);
-    setSelectedHof("");
     setMembers([]);
     setSelectedMember("");
     setIsHof(false);
@@ -179,13 +248,12 @@ const AddDeathRecord = () => {
     }));
   };
 
-
   // Submit form
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (isParishioner && (!selectedFamily || !selectedHof || !selectedMember)) {
-      alert("⚠️ Please complete family, HOF, and member selection.");
+    if (isParishioner && (!selectedFamily || !selectedMember)) {
+      alert("⚠️ Please complete family and member selection.");
       return;
     }
 
@@ -231,10 +299,8 @@ const AddDeathRecord = () => {
       setSavedRecord(data.death);
 
       // Reset form
-      setSearchQuery("");
       setFilteredFamilies([]);
       setSelectedFamily(null);
-      setSelectedHof("");
       setMembers([]);
       setSelectedMember("");
       setIsHof(false);
@@ -303,7 +369,15 @@ const AddDeathRecord = () => {
               <select
                 name="block"
                 value={formData.block}
-                onChange={(e) => setFormData({ ...formData, block: e.target.value, unit: "" })}
+                onChange={(e) => {
+                  setFormData({ ...formData, block: e.target.value, unit: "" });
+                  setFilteredFamilies([]);
+                  setSelectedFamily(null);
+                  setMembers([]);
+                  setSelectedMember("");
+                  setIsHof(false);
+                  setNextHof("");
+                }}
               >
                 <option value="">Select Block</option>
                 {Object.keys(blockUnits).map((blockKey) => (
@@ -320,7 +394,14 @@ const AddDeathRecord = () => {
                 <select
                   name="unit"
                   value={formData.unit}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    handleChange(e);
+                    setSelectedFamily(null);
+                    setMembers([]);
+                    setSelectedMember("");
+                    setIsHof(false);
+                    setNextHof("");
+                  }}
                 >
                   <option value="">Select Unit</option>
                   {(blockUnits[parseInt(formData.block)] || []).map((unit) => (
@@ -337,65 +418,31 @@ const AddDeathRecord = () => {
         {/* ================= PARISHIONER FLOW ================= */}
         {isParishioner && (
           <>
-            {/* Search Family */}
             <div className="input-group">
-              <label>Search Family</label>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Type family name..."
-              />
-              {filteredFamilies.length > 0 && (
-                <ul className="suggestions">
-                  {filteredFamilies.map((fam) => (
-                    <li
-                      key={fam._id}
-                      onClick={() => {
-                        setSelectedFamily(fam);
-                        setSearchQuery(fam.name);
-                        setFilteredFamilies([]);
-                        const sameNameFamilies = families.filter(
-                          (f) => f.name === fam.name
-                        );
-                        if (sameNameFamilies.length === 1) {
-                          setSelectedHof(fam.hof);
-                        } else {
-                          setSelectedHof("");
-                        }
-                      }}
-                    >
-                      {fam.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <label>Select Family</label>
+              <select
+                value={selectedFamily?._id || ""}
+                onChange={(e) => {
+                  const fam = filteredFamilies.find((f) => f._id === e.target.value) || null;
+                  setSelectedFamily(fam);
+                  setSelectedMember("");
+                  setIsHof(false);
+                  setNextHof("");
+                }}
+                disabled={!formData.block || !formData.unit}
+                required
+              >
+                <option value="">Select Family</option>
+                {filteredFamilies.map((fam) => (
+                  <option key={fam._id} value={fam._id}>
+                    {fam.name} — HOF: {fam.hof} — No: {fam.family_number}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* HOF dropdown */}
-            {selectedFamily &&
-              families.filter((f) => f.name === selectedFamily.name).length > 1 && (
-                <div className="input-group">
-                  <label>Select HOF</label>
-                  <select
-                    value={selectedHof}
-                    onChange={(e) => setSelectedHof(e.target.value)}
-                    required
-                  >
-                    <option value="">Select HOF</option>
-                    {families
-                      .filter((f) => f.name === selectedFamily.name)
-                      .map((f) => (
-                        <option key={f._id} value={f.hof}>
-                          {f.hof}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              )}
-
             {/* Member dropdown */}
-            {selectedHof && members.length > 0 && (
+            {selectedFamily && members.length > 0 && (
               <div className="input-group">
                 <label>Select Member (Deceased)</label>
                 <select

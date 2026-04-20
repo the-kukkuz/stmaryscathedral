@@ -2,11 +2,84 @@ import express from "express";
 import mongoose from "mongoose";
 import Death from "../models/Death.js";
 import Member from "../models/Member.js";
+import Family from "../models/Family.js";
+import { nextSequence, buildYearRegNo } from "../utils/sequence.js";
 
 const router = express.Router();
 
+const makeError = (status, message) => {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+};
+
+const syncFamilyLeadership = async ({ familyNumber, session = null, preferredHofId = null }) => {
+  let livingQuery = Member.find({
+    family_number: familyNumber,
+    deceased: { $ne: true }
+  }).sort({ dob: 1 });
+
+  if (session) {
+    livingQuery = livingQuery.session(session);
+  }
+
+  const livingMembers = await livingQuery;
+
+  const memberUpdateOpts = session ? { session } : {};
+  const familyUpdateOpts = session ? { session, runValidators: true } : { runValidators: true };
+
+  if (livingMembers.length === 0) {
+    await Member.updateMany(
+      { family_number: familyNumber },
+      { hof: false },
+      memberUpdateOpts
+    );
+
+    await Family.findOneAndUpdate(
+      { family_number: familyNumber },
+      { hof: null, status: "closed" },
+      familyUpdateOpts
+    );
+
+    return;
+  }
+
+  let selectedHof = null;
+
+  if (preferredHofId) {
+    selectedHof = livingMembers.find((member) => String(member._id) === String(preferredHofId));
+    if (!selectedHof) {
+      throw makeError(404, "Selected next HOF not found");
+    }
+  }
+
+  if (!selectedHof) {
+    selectedHof = livingMembers.find((member) => member.hof === true) || livingMembers[0];
+  }
+
+  await Member.updateMany(
+    { family_number: familyNumber },
+    { hof: false },
+    memberUpdateOpts
+  );
+
+  await Member.findByIdAndUpdate(
+    selectedHof._id,
+    { hof: true },
+    memberUpdateOpts
+  );
+
+  await Family.findOneAndUpdate(
+    { family_number: familyNumber },
+    { hof: selectedHof.name, status: "active" },
+    familyUpdateOpts
+  );
+};
+
 // ➕ Add Death Record
 router.post("/", async (req, res) => {
+  let session;
+
   try {
     const payload = {
       isParishioner: req.body.isParishioner,
@@ -36,15 +109,10 @@ router.post("/", async (req, res) => {
       ...deathData
     } = payload;
 
-    // Auto-generate reg_no: YY/NNNN
+    // Auto-generate reg_no: YY/NNNN (atomic sequence)
     const now = new Date();
-    const year2 = String(now.getFullYear()).slice(-2);
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
-    const countThisYear = await Death.countDocuments({
-      createdAt: { $gte: startOfYear, $lte: endOfYear }
-    });
-    const regNo = `${year2}/${String(countThisYear + 1).padStart(4, '0')}`;
+    const nextRegSeq = await nextSequence(`death:reg:${now.getFullYear()}`);
+    const regNo = buildYearRegNo(now, nextRegSeq);
     deathData.reg_no = regNo;
 
     // Safety net: Double check that no empty strings accidentally got through
@@ -85,83 +153,77 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Invalid member ID format" });
     }
 
-    const memberToDecease = await Member.findById(memberId);
-    if (!memberToDecease) {
-      return res.status(404).json({ error: "Member not found" });
-    }
+    session = await mongoose.startSession();
 
-    const wasHof = memberToDecease.hof;
+    let savedDeath = null;
 
-    const newDeath = new Death({
-      ...deathData,
-      isParishioner: true,
-      member_id: memberId
-    });
+    await session.withTransaction(async () => {
+      const memberToDecease = await Member.findById(memberId).session(session);
 
-    await newDeath.save();
-
-    // Mark member deceased
-    await Member.findByIdAndUpdate(memberId, {
-      hof: false,
-      deceased: true
-    });
-
-    // ----------------------------
-    // HoF reassignment logic
-    // ----------------------------
-    if (wasHof) {
-      let newHof;
-
-      if (nextHofId) {
-        if (!mongoose.Types.ObjectId.isValid(nextHofId)) {
-          return res.status(400).json({ error: "Invalid next HOF ID format" });
-        }
-
-        newHof = await Member.findByIdAndUpdate(
-          nextHofId,
-          { hof: true },
-          { new: true }
-        );
-
-        if (!newHof) {
-          return res.status(404).json({
-            error: "Selected next HOF not found"
-          });
-        }
-      } else {
-        newHof = await Member.findOneAndUpdate(
-          {
-            family_number: familyNumber,
-            _id: { $ne: memberId },
-            deceased: { $ne: true }
-          },
-          { hof: true },
-          {
-            new: true,
-            sort: { dob: 1 } // oldest first
-          }
-        );
+      if (!memberToDecease) {
+        throw makeError(404, "Member not found");
       }
-    }
+
+      if (memberToDecease.deceased === true) {
+        throw makeError(409, "Death record already exists for this member");
+      }
+
+      const wasHof = memberToDecease.hof;
+
+      const newDeath = new Death({
+        ...deathData,
+        isParishioner: true,
+        member_id: memberId
+      });
+
+      await newDeath.save({ session });
+      savedDeath = newDeath;
+
+      memberToDecease.hof = false;
+      memberToDecease.deceased = true;
+      await memberToDecease.save({ session });
+
+      let preferredHofId = null;
+      if (wasHof && nextHofId) {
+        if (!mongoose.Types.ObjectId.isValid(nextHofId)) {
+          throw makeError(400, "Invalid next HOF ID format");
+        }
+
+        preferredHofId = nextHofId;
+      }
+
+      await syncFamilyLeadership({
+        familyNumber,
+        session,
+        preferredHofId
+      });
+    });
 
     res.status(201).json({
       message: "Parishioner death record added successfully",
-      death: newDeath
+      death: savedDeath
     });
 
   } catch (err) {
     console.error("Error adding death record:", err);
 
+    if (err.status) {
+      return res.status(err.status).json({ error: err.message });
+    }
+
     if (err.name === "ValidationError") {
       return res.status(400).json({
-        error: "Validation error! A field has incorrect data.",
-        details: err.message // This passes exactly which field failed back to the alert
+        error: "Validation error! A field has incorrect data."
       });
     }
 
     res.status(500).json({
       error: "An internal error occurred"
     });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 });
 
@@ -239,7 +301,7 @@ router.put("/:id", async (req, res) => {
     res.json(updatedDeath);
   } catch (err) {
     console.error("Error updating death record:", err);
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: "Invalid death record data" });
   }
 });
 
@@ -256,9 +318,15 @@ router.delete("/:id", async (req, res) => {
     }
 
     if (record.member_id) {
-      await Member.findByIdAndUpdate(record.member_id, {
+      const restoredMember = await Member.findByIdAndUpdate(record.member_id, {
         deceased: false
+      }, {
+        new: true
       });
+
+      if (restoredMember?.family_number) {
+        await syncFamilyLeadership({ familyNumber: restoredMember.family_number });
+      }
     }
 
     await Death.findByIdAndDelete(req.params.id);

@@ -15,7 +15,14 @@ const familySchema = new mongoose.Schema({
 
   hof: {
     type: String,
-    required: true
+    default: null
+  },
+
+  status: {
+    type: String,
+    enum: ["active", "closed"],
+    default: "active",
+    index: true
   },
 
   count: {

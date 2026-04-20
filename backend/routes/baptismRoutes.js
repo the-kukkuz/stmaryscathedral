@@ -1,16 +1,26 @@
 import express from "express";
 import mongoose from "mongoose";
 import Baptism from "../models/Baptism.js";
+import Counter from "../models/Counter.js";
 import Member from "../models/Member.js";
 import Family from "../models/Family.js";
+import { nextSequence, buildYearRegNo } from "../utils/sequence.js";
 
 const router = express.Router();
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // Get next available serial number
 router.get("/next-sl-no", async (req, res) => {
   try {
-    const lastRecord = await Baptism.findOne().sort({ sl_no: -1 });
-    const nextSlNo = lastRecord ? lastRecord.sl_no + 1 : 1;
+    const counter = await Counter.findOne({ key: "baptism:sl_no" }).lean();
+
+    let nextSlNo = (counter?.seq || 0) + 1;
+    if (!counter) {
+      const lastRecord = await Baptism.findOne().sort({ sl_no: -1 }).lean();
+      nextSlNo = (lastRecord?.sl_no || 0) + 1;
+    }
+
     res.json({ next_sl_no: nextSlNo });
   } catch (err) {
     console.error("Error fetching next baptism serial:", err);
@@ -21,14 +31,17 @@ router.get("/next-sl-no", async (req, res) => {
 // Search families by name
 router.get("/search-families/:searchTerm", async (req, res) => {
   try {
-    const searchTerm = req.params.searchTerm;
-    console.log("Searching for:", searchTerm); // Debug log
+    const searchTerm = String(req.params.searchTerm || "").trim();
+    if (!searchTerm) {
+      return res.json([]);
+    }
+
+    const safePattern = escapeRegex(searchTerm.slice(0, 64));
 
     const families = await Family.find({
-      name: { $regex: searchTerm, $options: 'i' }
+      name: { $regex: safePattern, $options: "i" }
     }).limit(20);
 
-    console.log("Found families:", families.length); // Debug log
     res.json(families);
   } catch (err) {
     console.error("Search error:", err);
@@ -39,11 +52,16 @@ router.get("/search-families/:searchTerm", async (req, res) => {
 // Get heads of family by family name
 router.get("/heads-of-family/:familyName", async (req, res) => {
   try {
-    const familyName = req.params.familyName;
+    const familyName = String(req.params.familyName || "").trim();
+    if (!familyName) {
+      return res.json([]);
+    }
+
+    const safeName = escapeRegex(familyName.slice(0, 64));
 
     // Get all families with this name
     const families = await Family.find({
-      name: { $regex: `^${familyName}$`, $options: 'i' }
+      name: { $regex: `^${safeName}$`, $options: "i" }
     });
 
     res.json(families);
@@ -57,16 +75,6 @@ router.get("/heads-of-family/:familyName", async (req, res) => {
 router.get("/unbaptized-members/:familyNumber", async (req, res) => {
   try {
     const familyNumber = req.params.familyNumber;
-    console.log("========================================");
-    console.log("Fetching unbaptized members for family:", familyNumber);
-
-    // First, get ALL members from this family to debug
-    const allMembers = await Member.find({ family_number: familyNumber });
-    console.log(`Total members in family ${familyNumber}:`, allMembers.length);
-
-    allMembers.forEach(m => {
-      console.log(`- ${m.name}: baptism=${m.baptism}, deceased=${m.deceased}`);
-    });
 
     // Get unbaptized members
     const unbaptizedMembers = await Member.find({
@@ -74,12 +82,6 @@ router.get("/unbaptized-members/:familyNumber", async (req, res) => {
       baptism: false,
       deceased: { $ne: true }  // Not true (includes false, null, undefined)
     }).sort({ dob: -1 });
-
-    console.log(`Unbaptized members found: ${unbaptizedMembers.length}`);
-    unbaptizedMembers.forEach(m => {
-      console.log(`✓ ${m.name} (${m.gender})`);
-    });
-    console.log("========================================");
 
     res.json(unbaptizedMembers);
   } catch (err) {
@@ -141,7 +143,6 @@ router.post("/fix-baptism-status", async (req, res) => {
       const baptismRecord = await Baptism.findOne({ member_id: member._id });
       if (!baptismRecord) {
         // This member is marked baptized but has no record
-        console.log(`Member ${member.name} marked baptized but has no record`);
         // Optionally uncomment to auto-fix:
         // member.baptism = false;
         // await member.save();
@@ -164,8 +165,6 @@ router.post("/fix-baptism-status", async (req, res) => {
 // Create new baptism record
 router.post("/", async (req, res) => {
   try {
-    console.log("📥 Received baptism data:", req.body);
-
     const payload = {
       isParishioner: req.body.isParishioner,
       member_id: req.body.member_id,
@@ -208,19 +207,11 @@ router.post("/", async (req, res) => {
       remarks
     } = payload;
 
-    // Get next serial number
-    const lastRecord = await Baptism.findOne().sort({ sl_no: -1 });
-    const nextSlNo = lastRecord ? lastRecord.sl_no + 1 : 1;
-
-    // Auto-generate reg_no: YY/NNNN
+    // Auto-generate identifiers
     const now = new Date();
-    const year2 = String(now.getFullYear()).slice(-2);
-    const startOfYear = new Date(now.getFullYear(), 0, 1);
-    const endOfYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
-    const countThisYear = await Baptism.countDocuments({
-      createdAt: { $gte: startOfYear, $lte: endOfYear }
-    });
-    const regNo = `${year2}/${String(countThisYear + 1).padStart(4, '0')}`;
+    const nextSlNo = await nextSequence("baptism:sl_no");
+    const nextRegSeq = await nextSequence(`baptism:reg:${now.getFullYear()}`);
+    const regNo = buildYearRegNo(now, nextRegSeq);
 
     let baptismData = {
       sl_no: nextSlNo,
@@ -308,7 +299,6 @@ router.post("/", async (req, res) => {
     const baptism = new Baptism(baptismData);
     await baptism.save();
 
-    console.log("✅ Baptism saved:", baptism);
     res.status(201).json({
       message: "Baptism record created successfully",
       data: baptism
@@ -323,7 +313,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: "Invalid baptism data" });
   }
 });
 
@@ -414,7 +404,7 @@ router.put("/:id", async (req, res) => {
     });
   } catch (err) {
     console.error("Error updating baptism:", err);
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: "Invalid baptism update data" });
   }
 });
 
